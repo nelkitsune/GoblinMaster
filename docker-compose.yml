@@ -1,0 +1,38 @@
+version: "3.8"
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: gm_mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: goblinmaster       # crea la DB al iniciar
+      MYSQL_USER: goblin
+      MYSQL_PASSWORD: goblin
+    ports:
+      - "3307:3306"                      # usa 3307 en tu máquina (evita choque con MySQL local)
+    command: ["--default-authentication-plugin=mysql_native_password"]
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-proot"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    volumes:
+      - gm_mysql_data:/var/lib/mysql
+
+  mongo:
+    image: mongo:6
+    container_name: gm_mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - gm_mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.runCommand({ ping: 1 }).ok"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  gm_mysql_data:
+  gm_mongo_data:
