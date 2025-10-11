@@ -54,7 +54,9 @@ public class CampaignService {
         // Solo OWNER puede agregar
         boolean isOwner = members.existsByCampaignIdAndUserEmailAndRole(
                 campaignId, auth.getName(), CampaignRole.OWNER);
-        if (!isOwner) throw new SecurityException("Solo OWNER puede agregar miembros");
+
+        if (!isOwner) throw new SecurityException("Solo OWNER puede realizar esta acción");
+
 
         Campaign c = campaigns.findById(campaignId).orElseThrow();
         User u = users.findById(req.userId()).orElseThrow();

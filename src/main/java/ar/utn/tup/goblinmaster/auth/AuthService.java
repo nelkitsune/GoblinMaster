@@ -5,9 +5,12 @@ import ar.utn.tup.goblinmaster.auth.dto.*;
 import ar.utn.tup.goblinmaster.users.User;
 import ar.utn.tup.goblinmaster.users.UserRepository;
 import org.springframework.security.authentication.*;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 @Service
 public class AuthService {
@@ -29,13 +32,13 @@ public class AuthService {
                 .username(req.username())
                 .email(req.email())
                 .password(encoder.encode(req.password()))
-                .role(User.Role.valueOf(req.role()))
+                .role(User.Role.USER)
                 .build();
         users.save(u);
 
         UserDetails ud = new org.springframework.security.core.userdetails.User(
                 u.getEmail(), u.getPassword(),
-                java.util.List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_" + u.getRole().name()))
+                List.of(new SimpleGrantedAuthority("ROLE_" + u.getRole().name()))
         );
         return new AuthResponse(jwt.generateToken(ud));
     }

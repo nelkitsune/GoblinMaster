@@ -24,5 +24,5 @@ public class User {
     @Column(nullable = false)
     private Role role;
 
-    public enum Role { DM, PLAYER }
+    public enum Role { USER, ADMIN }
 }

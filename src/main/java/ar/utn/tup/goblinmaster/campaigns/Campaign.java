@@ -29,10 +29,12 @@ public class Campaign {
     @JoinColumn(name = "owner_id")
     private User owner;
 
+    @Builder.Default
     @Column(nullable=false)
     private Boolean active = true;
 
-    @Column(nullable=false, updatable=false)
+    @Builder.Default
+    @Column(name = "created_at", nullable=false, updatable=false)
     private Instant createdAt = Instant.now();
 
     @OneToMany(mappedBy = "campaign", cascade = CascadeType.ALL, orphanRemoval = true)
