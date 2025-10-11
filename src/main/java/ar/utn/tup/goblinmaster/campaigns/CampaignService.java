@@ -49,25 +49,105 @@ public class CampaignService {
                 .stream().map(this::toDto).toList();
     }
 
+
+
+
+    @Transactional(readOnly = true)
+    public CampaignResponse getOne(Long id, Authentication auth) {
+        ensureMember(id, auth);
+        Campaign c = campaigns.findById(id).orElseThrow();
+        return toDto(c);
+    }
+
     @Transactional
-    public void addMember(Long campaignId, AddMemberRequest req, Authentication auth) {
-        // Solo OWNER puede agregar
-        boolean isOwner = members.existsByCampaignIdAndUserEmailAndRole(
-                campaignId, auth.getName(), CampaignRole.OWNER);
+    public CampaignResponse update(Long id, UpdateCampaignRequest req, Authentication auth) {
+        ensureOwner(id, auth);
+        Campaign c = campaigns.findById(id).orElseThrow();
 
-        if (!isOwner) throw new SecurityException("Solo OWNER puede realizar esta acción");
+        if (req.name() != null && !req.name().isBlank()) c.setName(req.name());
+        if (req.description() != null) c.setDescription(req.description());
+        if (req.active() != null) c.setActive(req.active());
 
+        return toDto(campaigns.save(c));
+    }
 
+    @Transactional(readOnly = true)
+    public List<MemberResponse> listMembers(Long campaignId, Authentication auth) {
+        ensureMember(campaignId, auth);
+        return members.findAllByCampaignId(campaignId).stream()
+                .map(m -> new MemberResponse(
+                        m.getId(),
+                        m.getUser().getId(),
+                        m.getUser().getEmail(),
+                        m.getRole().name()))
+                .toList();
+    }
+
+    @Transactional
+    public boolean addMember(Long campaignId, AddMemberRequest req, Authentication auth) {
+        ensureOwner(campaignId, auth);
         Campaign c = campaigns.findById(campaignId).orElseThrow();
         User u = users.findById(req.userId()).orElseThrow();
 
-        if (members.existsByCampaignIdAndUserId(campaignId, u.getId())) return;
+        if (members.existsByCampaignIdAndUserId(campaignId, u.getId())) return false;
 
         CampaignMember m = CampaignMember.builder()
                 .campaign(c).user(u)
                 .role(CampaignRole.valueOf(req.role()))
                 .build();
         members.save(m);
+        return true;
+    }
+
+    @Transactional
+    public void removeMember(Long campaignId, Long userId, Authentication auth) {
+        ensureOwner(campaignId, auth);
+        // No permitir dejar sin OWNER
+        var owners = members.countByCampaignIdAndRole(campaignId, CampaignRole.OWNER);
+        var isOwnerTarget = users.findById(userId)
+                .map(u -> members.existsByCampaignIdAndUserId(campaignId, u.getId()) &&
+                        members.existsByCampaignIdAndUserEmailAndRole(campaignId, u.getEmail(), CampaignRole.OWNER))
+                .orElse(false);
+
+        if (isOwnerTarget && owners <= 1) {
+            throw new IllegalStateException("No se puede quitar al último OWNER de la campaña");
+        }
+
+        members.deleteByCampaignIdAndUserId(campaignId, userId);
+    }
+
+    @Transactional
+    public void transferOwnership(Long campaignId, Long toUserId, Authentication auth) {
+        ensureOwner(campaignId, auth);
+        User target = users.findById(toUserId).orElseThrow();
+
+        // Asegurar que el destino sea miembro (si no, lo agregamos)
+        if (!members.existsByCampaignIdAndUserId(campaignId, target.getId())) {
+            Campaign c = campaigns.findById(campaignId).orElseThrow();
+            members.save(CampaignMember.builder()
+                    .campaign(c).user(target).role(CampaignRole.PLAYER).build());
+        }
+
+        // Degradar al owner actual (quien hace la acción) a PLAYER y promover al destino a OWNER
+        User current = me(auth);
+        var c = campaigns.findById(campaignId).orElseThrow();
+
+        members.findAllByCampaignId(campaignId).forEach(m -> {
+            if (m.getUser().getId().equals(current.getId())) m.setRole(CampaignRole.PLAYER);
+            if (m.getUser().getId().equals(target.getId())) m.setRole(CampaignRole.OWNER);
+        });
+        campaigns.save(c); // flush por cascada si aplica
+    }
+
+    // ------- helpers -------
+    private void ensureMember(Long campaignId, Authentication auth) {
+        boolean isMember = members.findByCampaignIdAndUserEmail(campaignId, auth.getName()).isPresent();
+        if (!isMember) throw new SecurityException("No perteneces a esta campaña");
+    }
+
+    private void ensureOwner(Long campaignId, Authentication auth) {
+        boolean isOwner = members.existsByCampaignIdAndUserEmailAndRole(campaignId, auth.getName(), CampaignRole.OWNER);
+        if (!isOwner) throw new SecurityException("Solo OWNER puede realizar esta acción");
     }
 
     private CampaignResponse toDto(Campaign c) {
@@ -78,3 +158,4 @@ public class CampaignService {
         );
     }
 }
+

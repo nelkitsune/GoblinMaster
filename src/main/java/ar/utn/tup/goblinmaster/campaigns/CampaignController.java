@@ -35,4 +35,36 @@ public class CampaignController {
         service.addMember(id, req, auth);
         return ResponseEntity.noContent().build();
     }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<CampaignResponse> getOne(@PathVariable Long id, Authentication auth) {
+        return ResponseEntity.ok(service.getOne(id, auth));
+    }
+
+    @PatchMapping("/{id}")
+    public ResponseEntity<CampaignResponse> update(@PathVariable Long id,
+                                                   @RequestBody UpdateCampaignRequest req,
+                                                   Authentication auth) {
+        return ResponseEntity.ok(service.update(id, req, auth));
+    }
+
+    @GetMapping("/{id}/members")
+    public ResponseEntity<List<MemberResponse>> members(@PathVariable Long id, Authentication auth) {
+        return ResponseEntity.ok(service.listMembers(id, auth));
+    }
+
+    @DeleteMapping("/{id}/members/{userId}")
+    public ResponseEntity<Void> removeMember(@PathVariable Long id, @PathVariable Long userId, Authentication auth) {
+        service.removeMember(id, userId, auth);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{id}/transfer-owner")
+    public ResponseEntity<Void> transferOwner(@PathVariable Long id,
+                                              @RequestParam Long toUserId,
+                                              Authentication auth) {
+        service.transferOwnership(id, toUserId, auth);
+        return ResponseEntity.noContent().build();
+    }
+
 }
