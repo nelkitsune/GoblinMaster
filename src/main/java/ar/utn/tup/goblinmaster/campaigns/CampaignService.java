@@ -9,7 +9,10 @@ import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.List;
+
+import static java.util.stream.Collectors.toList;
 
 @Service
 public class CampaignService {
@@ -59,17 +62,6 @@ public class CampaignService {
         return toDto(c);
     }
 
-    @Transactional
-    public CampaignResponse update(Long id, UpdateCampaignRequest req, Authentication auth) {
-        ensureOwner(id, auth);
-        Campaign c = campaigns.findById(id).orElseThrow();
-
-        if (req.name() != null && !req.name().isBlank()) c.setName(req.name());
-        if (req.description() != null) c.setDescription(req.description());
-        if (req.active() != null) c.setActive(req.active());
-
-        return toDto(campaigns.save(c));
-    }
 
     @Transactional(readOnly = true)
     public List<MemberResponse> listMembers(Long campaignId, Authentication auth) {
@@ -152,10 +144,55 @@ public class CampaignService {
 
     private CampaignResponse toDto(Campaign c) {
         return new CampaignResponse(
-                c.getId(), c.getName(), c.getDescription(),
+                c.getId(),
+                c.getName(),
+                c.getDescription(),
                 Boolean.TRUE.equals(c.getActive()),
-                c.getOwner().getId(), c.getOwner().getEmail()
+                c.getOwner().getId(),
+                c.getOwner().getEmail(),
+                c.getSystem(),
+                c.getSetting(),
+                c.getImageUrl(),
+                c.getCreatedAt(),
+                c.getUpdatedAt(),
+                c.getDeletedAt()
         );
     }
+    @Transactional(readOnly = true)
+    public List<CampaignResponse> listUserCampaigns(Authentication auth) {
+        var user = users.findByEmail(auth.getName()).orElseThrow();
+        return campaigns.findAllByUserParticipation(user.getId())
+                .stream().map(this::toDto).toList();
+    }
+
+    @Transactional
+    public CampaignResponse update(Long id, UpdateCampaignRequest req, Authentication auth) {
+        ensureOwner(id, auth);
+        Campaign c = campaigns.findById(id).orElseThrow();
+
+        if (req.name() != null && !req.name().isBlank()) c.setName(req.name());
+        if (req.description() != null) c.setDescription(req.description());
+        if (req.game_system() != null) c.setSystem(req.game_system());
+        if (req.setting() != null) c.setSetting(req.setting());
+        if (req.imageUrl() != null) c.setImageUrl(req.imageUrl());
+        if (req.active() != null) {
+            c.setActive(req.active());
+            if (!req.active() && c.getDeletedAt() == null) c.setDeletedAt(Instant.now());
+            if (req.active() && c.getDeletedAt() != null) c.setDeletedAt(null);
+        }
+
+        return toDto(campaigns.save(c));
+    }
+
+    @Transactional
+    public void softDelete(Long id, Authentication auth) {
+        ensureOwner(id, auth);
+        Campaign c = campaigns.findById(id).orElseThrow();
+        if (Boolean.FALSE.equals(c.getActive()) && c.getDeletedAt() != null) return;
+        c.setActive(false);
+        c.setDeletedAt(Instant.now());
+        campaigns.save(c);
+    }
+
 }
 

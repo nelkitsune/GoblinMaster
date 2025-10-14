@@ -48,6 +48,12 @@ public class CampaignController {
         return ResponseEntity.ok(service.update(id, req, auth));
     }
 
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> softDelete(@PathVariable Long id, Authentication auth) {
+        service.softDelete(id, auth);
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping("/{id}/members")
     public ResponseEntity<List<MemberResponse>> members(@PathVariable Long id, Authentication auth) {
         return ResponseEntity.ok(service.listMembers(id, auth));
@@ -65,6 +71,12 @@ public class CampaignController {
                                               Authentication auth) {
         service.transferOwnership(id, toUserId, auth);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/my")
+    public ResponseEntity<List<CampaignResponse>> listMyCampaigns(Authentication auth) {
+        var result = service.listUserCampaigns(auth);
+        return ResponseEntity.ok(result);
     }
 
 }

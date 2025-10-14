@@ -7,6 +7,7 @@ import lombok.*;
 import java.time.Instant;
 import java.util.HashSet;
 import java.util.Set;
+
 @Getter
 @Setter
 @NoArgsConstructor
@@ -14,7 +15,6 @@ import java.util.Set;
 @Builder
 @Entity
 @Table(name = "campaigns")
-
 public class Campaign {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -37,7 +37,29 @@ public class Campaign {
     @Column(name = "created_at", nullable=false, updatable=false)
     private Instant createdAt = Instant.now();
 
+    @Column(name = "game_system", length = 120)
+    private String system;
+
+    @Column(length = 120)
+    private String setting;
+
+    @Column(length = 500)
+    private String imageUrl;
+
+    @Column(name = "updated_at", nullable=false, insertable=false, updatable=false)
+    private Instant updatedAt;
+
+    @Column(name = "deleted_at")
+    private Instant deletedAt;
+
     @OneToMany(mappedBy = "campaign", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<CampaignMember> members = new HashSet<>();
+
+    @PrePersist
+    void prePersist(){
+        if (createdAt==null) createdAt = Instant.now();
+        if (active==null) active = true;
+    }
+
 
 }

@@ -133,6 +133,20 @@
 					</excludes>
 				</configuration>
 			</plugin>
+			<plugin>
+				<groupId>org.flywaydb</groupId>
+				<artifactId>flyway-maven-plugin</artifactId>
+				<version>11.7.2</version>
+				<configuration>
+					<!-- IMPORTANTE: los & deben ir como &amp; -->
+					<url>jdbc:mysql://localhost:3307/goblinmaster?useSSL=false&amp;allowPublicKeyRetrieval=true&amp;serverTimezone=UTC</url>
+					<user>goblin</user>
+					<password>goblin</password>
+					<locations>
+						<location>classpath:db/migration</location>
+					</locations>
+				</configuration>
+			</plugin>
 		</plugins>
 	</build>
 

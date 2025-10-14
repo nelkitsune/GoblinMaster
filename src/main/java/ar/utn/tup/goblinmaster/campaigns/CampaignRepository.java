@@ -15,4 +15,12 @@ public interface CampaignRepository extends JpaRepository<Campaign, Long> {
       order by c.createdAt desc
     """)
     List<Campaign> findAllForUser(@Param("email") String email);
+
+    @Query("""
+        SELECT DISTINCT c
+        FROM Campaign c
+        LEFT JOIN c.members m
+        WHERE c.owner.id = :userId or m.user.id = :userId
+""")
+    List<Campaign> findAllByUserParticipation(@Param("userId") Long userId);
 }
