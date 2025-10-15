@@ -1,0 +1,2 @@
+ALTER TABLE spells
+    MODIFY COLUMN description LONGTEXT NULL;
