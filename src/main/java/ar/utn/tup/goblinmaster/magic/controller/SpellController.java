@@ -22,7 +22,6 @@ public class SpellController {
     private final SpellService service;
 
     @PostMapping
-    @PreAuthorize("hasAuthority('campaign:write') or hasAuthority('user:write')") // ajustá a tu esquema
     public ResponseEntity<SpellResponse> create(@Valid @RequestBody SpellRequest req) {
         return ResponseEntity.status(HttpStatus.CREATED).body(service.create(req));
     }
