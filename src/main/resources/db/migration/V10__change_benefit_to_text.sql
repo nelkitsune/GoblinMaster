@@ -1,0 +1,1 @@
+ALTER TABLE feats MODIFY Benefit TEXT NOT NULL;

@@ -10,5 +10,5 @@ public class SpellListItem {
     private String name;
     private String schoolCode;
     private String schoolName;
-    private String summary; // opcional: primeras N palabras de description
+    private String summary;
 }

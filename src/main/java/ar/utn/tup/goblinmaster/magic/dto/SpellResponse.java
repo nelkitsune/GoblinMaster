@@ -29,5 +29,5 @@ public class SpellResponse {
     private String source;
     private String description;
 
-    private Map<String,Integer> classLevels; // code -> level
+    private Map<String,Integer> classLevels;
 }

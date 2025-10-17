@@ -14,7 +14,7 @@ public class SpellRequest {
     private String name;
     private String originalName;
 
-    @NotBlank private String schoolCode; // EVOCATION, etc.
+    @NotBlank private String schoolCode;
 
     private String castingTime;
     private String rangeText;
@@ -31,7 +31,6 @@ public class SpellRequest {
     private String source;
     private String description;
 
-    // niveles por clase: {"WIZARD":3,"SORCERER":3,"MAGUS":3,"OCCULTIST":3,"BLOODRAGER":3}
     @NotNull
     private Map<String,Integer> classLevels;
 }
