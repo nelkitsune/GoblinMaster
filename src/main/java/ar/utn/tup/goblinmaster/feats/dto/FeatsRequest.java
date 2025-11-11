@@ -21,6 +21,7 @@ public class FeatsRequest {
     @NotBlank
     private String benefit;
     private String special;
+    private String descripcion;
     private List<Feats.Tipo> tipo;
     private List<PrereqGroupRequest> prereqGroups;
 }

@@ -4,8 +4,8 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 
 @Entity
 @Table(name = "prereq_groups")
@@ -17,10 +17,10 @@ public class PrereqGroup {
     @ManyToOne(optional = false)
     @JoinColumn(name = "feat_id")
     private Feats feat;
-
+    @Column(name = "group_index")
     private int groupIndex;
 
     @OneToMany(mappedBy = "group", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<PrereqCondition> conditions = new ArrayList<>();
+    private Set<PrereqCondition> conditions = new HashSet<>();
 
 }

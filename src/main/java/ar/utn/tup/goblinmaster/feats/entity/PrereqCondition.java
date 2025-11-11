@@ -20,6 +20,15 @@ public class PrereqCondition {
     @Enumerated(EnumType.STRING)
     private PrereqKind kind;
 
+    @Column (name = "feat_id")
+    private Long featId;
+
+    @Column(name = "target")
+    private String target; // p.ej.: STR, DEX, SKILL_NAME, SIZE, ALIGNMENT, CLASS, etc.
+
+    @Column(name = "int_value")
+    private Integer intValue; // p.ej.: 13 para ABILITY_SCORE, 6 para BAB, etc.
+
 
 
     public enum PrereqKind {

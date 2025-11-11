@@ -9,4 +9,5 @@ import java.util.List;
 public interface FeatsService {
     FeatsResponse createFeat(FeatsRequest request);
     List<FeatsResponse> getAllFeats();
+    FeatsResponse getFeatById(Long id);
 }

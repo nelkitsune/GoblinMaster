@@ -12,8 +12,10 @@ import ar.utn.tup.goblinmaster.feats.repository.FeatsRepository;
 import org.springframework.stereotype.Service;
 import lombok.RequiredArgsConstructor;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.HashMap;
 
 @Service
 @RequiredArgsConstructor
@@ -25,27 +27,31 @@ public class FeatsServiceImpl implements FeatsService {
     public FeatsResponse createFeat(FeatsRequest request) {
         Feats feat = FeatsMapper.toEntity(request);
 
-        // Crear y asociar grupos y condiciones
+        // Crear y asociar grupos y condiciones (fusionando mismos groupIndex)
         if (request.getPrereqGroups() != null) {
-            List<PrereqGroup> groups = new ArrayList<>();
+            Map<Integer, PrereqGroup> gruposPorIndice = new HashMap<>();
             for (PrereqGroupRequest groupReq : request.getPrereqGroups()) {
-                PrereqGroup group = new PrereqGroup();
-                group.setFeat(feat);
-                group.setGroupIndex(groupReq.getGroupIndex());
-
-                List<PrereqCondition> conditions = new ArrayList<>();
+                int idx = groupReq.getGroupIndex();
+                PrereqGroup group = gruposPorIndice.computeIfAbsent(idx, k -> {
+                    PrereqGroup nuevo = new PrereqGroup();
+                    nuevo.setFeat(feat);
+                    nuevo.setGroupIndex(k);
+                    nuevo.setConditions(new HashSet<>());
+                    return nuevo;
+                });
                 if (groupReq.getConditions() != null) {
                     for (PrereqConditionRequest condReq : groupReq.getConditions()) {
                         PrereqCondition cond = new PrereqCondition();
                         cond.setGroup(group);
                         cond.setKind(condReq.getKind());
-                        conditions.add(cond);
+                        cond.setFeatId(condReq.getFeatId());
+                        cond.setTarget(condReq.getTarget());
+                        cond.setIntValue(condReq.getIntValue());
+                        group.getConditions().add(cond);
                     }
                 }
-                group.setConditions(conditions);
-                groups.add(group);
             }
-            feat.setPrereqGroups(groups);
+            feat.setPrereqGroups(new HashSet<>(gruposPorIndice.values()));
         }
 
         Feats saved = featsRepository.save(feat);
@@ -54,8 +60,14 @@ public class FeatsServiceImpl implements FeatsService {
 
     @Override
     public List<FeatsResponse> getAllFeats() {
-        return featsRepository.findAll().stream()
+        return featsRepository.findAllConPrereqs().stream()
                 .map(FeatsMapper::toResponse)
                 .toList();
+    }
+    @Override
+    public FeatsResponse getFeatById(Long id) {
+        Feats feat = featsRepository.findByIdConPrereqs(id)
+                .orElseThrow(() -> new RuntimeException("Feat not found with id: " + id));
+        return FeatsMapper.toResponse(feat);
     }
 }

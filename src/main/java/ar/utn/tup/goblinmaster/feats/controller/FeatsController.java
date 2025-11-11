@@ -26,4 +26,9 @@ public class FeatsController {
     public List<FeatsResponse> getAllFeats() {
         return service.getAllFeats();
     }
+
+    @GetMapping("/{id}")
+    public FeatsResponse getFeatById(@PathVariable Long id) {
+        return service.getFeatById(id);
+    }
 }

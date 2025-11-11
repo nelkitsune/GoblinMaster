@@ -4,7 +4,8 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.util.List;
+import java.util.Set;
+import java.util.HashSet;
 
 @Entity
 @Table(name = "feats")
@@ -18,6 +19,9 @@ public class Feats {
 
     @Column(name = "original_name", unique = true, nullable = false)
     private String originalName;
+
+    @Column(name="descripcion", columnDefinition = "TEXT")
+    private String descripcion;
 
     @Column(name = "code", nullable = false)
     private String code;
@@ -35,7 +39,7 @@ public class Feats {
     private Tipo tipo;
 
     @OneToMany(mappedBy = "feat", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<PrereqGroup> prereqGroups;
+    private Set<PrereqGroup> prereqGroups = new HashSet<>();
 
     public enum Tipo {
         ARTISTICAS,
@@ -49,7 +53,7 @@ public class Feats {
         RACIAL
     }
 
-    public void setPrereqGroups(List<PrereqGroup> prereqGroups) {
+    public void setPrereqGroups(Set<PrereqGroup> prereqGroups) {
         this.prereqGroups = prereqGroups;
     }
 }

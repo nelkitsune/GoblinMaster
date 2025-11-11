@@ -13,8 +13,11 @@ public class FeatsResponse {
     private String name;
     private String originalName;
     private String code;
+    private String descripcion;
     private String source;
     private String benefit;
     private String special;
     private List<Feats.Tipo> tipo;
+    private List<PrereqGroupResponse> prereqGroups;
+
 }
