@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Component;
 
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -31,19 +32,24 @@ public class SpellMapper {
         return dto;
     }
 
-    public SpellListItem toListItem(Spell s) {
+    public SpellListItem toListItem(Spell s, List<SpellClassLevel> scl) {
         SpellListItem dto = new SpellListItem();
         dto.setId(s.getId());
         dto.setName(s.getName());
         dto.setSchoolCode(s.getSchool().getCode());
         dto.setSchoolName(s.getSchool().getName());
+        dto.setSummary(generarResumen(s.getDescription()));
 
-        if (s.getDescription() != null) {
-            String trimmed = s.getDescription().length() > 140
-                    ? s.getDescription().substring(0, 140) + "…"
-                    : s.getDescription();
-            dto.setSummary(trimmed);
+        Map<String, Integer> levels = new HashMap<>();
+        for (SpellClassLevel x : scl) {
+            levels.put(x.getSpellClass().getCode(), x.getLevel());
         }
+        dto.setClassLevels(levels);
         return dto;
+    }
+
+    private String generarResumen(String descripcion) {
+        if (descripcion == null) return null;
+        return descripcion.length() > 140 ? descripcion.substring(0, 140) + "…" : descripcion;
     }
 }

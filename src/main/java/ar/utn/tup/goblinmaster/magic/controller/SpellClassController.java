@@ -20,4 +20,10 @@ public class SpellClassController {
         SpellClass saved = repo.save(req);
         return ResponseEntity.status(HttpStatus.CREATED).body(saved);
     }
+    @GetMapping
+    public ResponseEntity<Iterable<SpellClass>> getAll() {
+        Iterable<SpellClass> all = repo
+                .findAll();
+        return ResponseEntity.ok(all);
+    }
 }

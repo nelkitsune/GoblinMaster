@@ -27,6 +27,7 @@ public class SpellResponse {
     private String materialDesc;
 
     private String source;
+    private String summary;
     private String description;
 
     private Map<String,Integer> classLevels;

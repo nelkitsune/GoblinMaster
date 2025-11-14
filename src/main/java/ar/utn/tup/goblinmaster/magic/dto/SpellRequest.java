@@ -29,6 +29,7 @@ public class SpellRequest {
     private String materialDesc;
 
     private String source;
+    private String summary;
     private String description;
 
     @NotNull

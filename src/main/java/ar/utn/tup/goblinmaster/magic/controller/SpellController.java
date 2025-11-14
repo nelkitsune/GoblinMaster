@@ -6,13 +6,12 @@ import ar.utn.tup.goblinmaster.magic.dto.SpellResponse;
 import ar.utn.tup.goblinmaster.magic.service.SpellService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/magic/spells")
@@ -34,11 +33,26 @@ public class SpellController {
 
     @GetMapping
     @PreAuthorize("hasAuthority('campaign:read')")
-    public Page<SpellListItem> search(
-            @RequestParam(value="q", required=false) String q,
-            @PageableDefault(size=20, sort="name") Pageable pageable) {
-        return service.search(q, pageable);
+    public List<SpellListItem> search(
+            @RequestParam(value="q", required=false) String q) {
+        return service.search(q);
     }
+
+    @GetMapping("/by-class/{spellClassId}")
+    @PreAuthorize("hasAuthority('campaign:read')")
+    public List<SpellListItem> getBySpellClass(
+            @PathVariable Long spellClassId) {
+        return service.getBySpellClass(spellClassId);
+    }
+
+// SpellController.java
+@GetMapping("/by-class/{spellClassId}/level/{level}")
+@PreAuthorize("hasAuthority('campaign:read')")
+public List<SpellListItem> getBySpellClassAndLevel(
+        @PathVariable Long spellClassId,
+        @PathVariable Integer level) {
+    return service.getBySpellClassAndLevel(spellClassId, level);
+}
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('campaign:write')")

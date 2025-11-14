@@ -11,11 +11,11 @@ import ar.utn.tup.goblinmaster.magic.repository.SpellRepository;
 import ar.utn.tup.goblinmaster.magic.repository.SpellSchoolRepository;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -76,9 +76,29 @@ public class SpellServiceImpl implements SpellService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<SpellListItem> search(String q, Pageable pageable) {
-        Page<Spell> page = spellRepo.search(q == null ? "" : q, pageable);
-        return page.map(mapper::toListItem);
+    public List<SpellListItem> search(String q) {
+        List<Spell> spells = spellRepo.search(q == null ? "" : q);
+        return spells.stream()
+                .map(spell -> mapper.toListItem(spell, sclRepo.findBySpellId(spell.getId())))
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<SpellListItem> getBySpellClass(Long spellClassId) {
+        List<Spell> spells = spellRepo.findBySpellClassId(spellClassId);
+        return spells.stream()
+                .map(spell -> mapper.toListItem(spell, sclRepo.findBySpellId(spell.getId())))
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<SpellListItem> getBySpellClassAndLevel(Long spellClassId, Integer level) {
+        List<Spell> spells = spellRepo.findBySpellClassIdAndLevel(spellClassId, level);
+        return spells.stream()
+                .map(spell -> mapper.toListItem(spell, sclRepo.findBySpellId(spell.getId())))
+                .collect(Collectors.toList());
     }
 
     @Override
@@ -120,7 +140,7 @@ public class SpellServiceImpl implements SpellService {
         return mapper.toResponse(s, sclRepo.findBySpellId(id));
     }
 
-
+    @Override
     public void delete(Long id) {
         spellRepo.deleteById(id);
     }

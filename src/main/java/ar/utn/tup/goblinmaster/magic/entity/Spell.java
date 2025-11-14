@@ -53,6 +53,9 @@ public class Spell {
 
     private String source;
 
+    @Column(name = "summary")
+    private String summary;
+
     @Lob
     private String description;
 }
