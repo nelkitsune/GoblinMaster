@@ -13,6 +13,7 @@ public record CampaignResponse(
         String game_system,
         String setting,
         String imageUrl,
+        String joinCode,
         Instant createdAt,
         Instant updatedAt,
         Instant deletedAt

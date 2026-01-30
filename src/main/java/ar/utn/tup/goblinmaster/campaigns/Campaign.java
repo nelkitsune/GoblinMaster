@@ -46,6 +46,9 @@ public class Campaign {
     @Column(length = 500)
     private String imageUrl;
 
+    @Column(name = "join_code", length = 16, nullable = false, unique = true)
+    private String joinCode;
+
     @Column(name = "updated_at", nullable=false, insertable=false, updatable=false)
     private Instant updatedAt;
 
@@ -59,7 +62,12 @@ public class Campaign {
     void prePersist(){
         if (createdAt==null) createdAt = Instant.now();
         if (active==null) active = true;
+        // joinCode debe estar seteado por el servicio antes de persistir
     }
 
+    @PreUpdate
+    void preUpdate() {
+        updatedAt = Instant.now();
+    }
 
 }

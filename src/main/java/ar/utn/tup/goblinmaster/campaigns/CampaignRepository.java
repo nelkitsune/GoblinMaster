@@ -23,4 +23,6 @@ public interface CampaignRepository extends JpaRepository<Campaign, Long> {
         WHERE c.owner.id = :userId or m.user.id = :userId
 """)
     List<Campaign> findAllByUserParticipation(@Param("userId") Long userId);
+
+    boolean existsByJoinCode(String joinCode);
 }

@@ -9,8 +9,10 @@ import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.security.SecureRandom;
 import java.time.Instant;
 import java.util.List;
+import java.util.Random;
 
 import static java.util.stream.Collectors.toList;
 
@@ -26,19 +28,38 @@ public class CampaignService {
     }
 
     private User me(Authentication auth) {
-        return users.findByEmail(auth.getName()).orElseThrow();
+        // TODO: reemplazar por JWT cuando esté disponible
+        return users.findById(1L).orElseGet(() -> users.findByEmail(auth != null ? auth.getName() : null).orElseThrow());
+    }
+
+    private String generateJoinCode() {
+        final String ALPH = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+        Random rnd = new SecureRandom();
+        for (int attempt = 0; attempt < 10; attempt++) {
+            int len = 8; // 6-10, elegimos 8
+            StringBuilder sb = new StringBuilder("GM-");
+            for (int i = 0; i < len; i++) sb.append(ALPH.charAt(rnd.nextInt(ALPH.length())));
+            String code = sb.toString();
+            if (!campaigns.existsByJoinCode(code)) return code;
+        }
+        throw new IllegalStateException("No se pudo generar join_code único");
     }
 
     @Transactional
     public CampaignResponse create(CreateCampaignRequest req, Authentication auth) {
         User owner = me(auth);
+        if (req.name() == null || req.name().length() < 2 || req.name().length() > 60)
+            throw new IllegalArgumentException("Nombre inválido");
+        if (req.description() != null && req.description().length() > 500)
+            throw new IllegalArgumentException("Descripción demasiado larga");
+
         Campaign c = Campaign.builder()
                 .name(req.name())
                 .description(req.description())
                 .owner(owner)
                 .active(true)
+                .joinCode(generateJoinCode())
                 .build();
-        // El dueño también queda como OWNER en members
         Campaign saved = campaigns.save(c);
         members.save(CampaignMember.builder()
                 .campaign(saved).user(owner).role(CampaignRole.OWNER).build());
@@ -48,7 +69,8 @@ public class CampaignService {
 
     @Transactional(readOnly = true)
     public List<CampaignResponse> myCampaigns(Authentication auth) {
-        return campaigns.findAllForUser(auth.getName())
+        var user = me(auth);
+        return campaigns.findAllByUserParticipation(user.getId())
                 .stream().map(this::toDto).toList();
     }
 
@@ -153,6 +175,7 @@ public class CampaignService {
                 c.getSystem(),
                 c.getSetting(),
                 c.getImageUrl(),
+                c.getJoinCode(),
                 c.getCreatedAt(),
                 c.getUpdatedAt(),
                 c.getDeletedAt()
@@ -195,4 +218,3 @@ public class CampaignService {
     }
 
 }
-

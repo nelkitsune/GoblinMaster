@@ -26,33 +26,33 @@ public class SpellController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAuthority('campaign:read')")
+    @PreAuthorize("permitAll()")
     public SpellResponse get(@PathVariable Long id) {
         return service.get(id);
     }
 
     @GetMapping
-    @PreAuthorize("hasAuthority('campaign:read')")
+    @PreAuthorize("permitAll()")
     public List<SpellListItem> search(
             @RequestParam(value="q", required=false) String q) {
         return service.search(q);
     }
 
     @GetMapping("/by-class/{spellClassId}")
-    @PreAuthorize("hasAuthority('campaign:read')")
+    @PreAuthorize("permitAll()")
     public List<SpellListItem> getBySpellClass(
             @PathVariable Long spellClassId) {
         return service.getBySpellClass(spellClassId);
     }
 
-// SpellController.java
-@GetMapping("/by-class/{spellClassId}/level/{level}")
-@PreAuthorize("hasAuthority('campaign:read')")
-public List<SpellListItem> getBySpellClassAndLevel(
-        @PathVariable Long spellClassId,
-        @PathVariable Integer level) {
-    return service.getBySpellClassAndLevel(spellClassId, level);
-}
+    // SpellController.java
+    @GetMapping("/by-class/{spellClassId}/level/{level}")
+    @PreAuthorize("permitAll()")
+    public List<SpellListItem> getBySpellClassAndLevel(
+            @PathVariable Long spellClassId,
+            @PathVariable Integer level) {
+        return service.getBySpellClassAndLevel(spellClassId, level);
+    }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('campaign:write')")
