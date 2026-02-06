@@ -25,4 +25,6 @@ public interface CampaignRepository extends JpaRepository<Campaign, Long> {
     List<Campaign> findAllByUserParticipation(@Param("userId") Long userId);
 
     boolean existsByJoinCode(String joinCode);
+
+    Campaign findByJoinCode(String joinCode);
 }

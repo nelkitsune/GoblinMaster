@@ -42,6 +42,7 @@ public class SecurityConfig {
                         "/swagger-ui/**",
                         "/swagger-ui.html"
                 ).permitAll()
+                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // permitir preflight CORS
                 .requestMatchers(HttpMethod.GET, "/api/magic/spells/**", "/api/feats/**").permitAll()
                 .anyRequest().authenticated()
         );
@@ -72,7 +73,7 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowedOrigins(List.of("http://localhost:3000")); // cambiar o agregar orígenes según necesidad
-        config.setAllowedMethods(List.of("GET","POST","PUT","DELETE","OPTIONS"));
+        config.setAllowedMethods(List.of("GET","POST","PUT","PATCH","DELETE","OPTIONS")); // agregar PATCH
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
 

@@ -55,6 +55,9 @@ public class Campaign {
     @Column(name = "deleted_at")
     private Instant deletedAt;
 
+    @Column(name = "image_public_id", length = 200)
+    private String imagePublicId; // nullable
+
     @OneToMany(mappedBy = "campaign", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<CampaignMember> members = new HashSet<>();
 

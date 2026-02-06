@@ -36,6 +36,12 @@ public class User {
     @Column(name = "biography", columnDefinition = "TEXT")
     private String biography;
 
+    @Column(name = "avatar_url", length = 500)
+    private String avatarUrl; // nullable
+
+    @Column(name = "avatar_public_id", length = 200)
+    private String avatarPublicId; // nullable
+
     @PrePersist
     void prePersist() {
         // Generar un código único tipo USR-XXXXXXXX (hex de UUID truncado)
