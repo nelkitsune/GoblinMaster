@@ -79,4 +79,10 @@ public class CampaignController {
         return ResponseEntity.ok(result);
     }
 
+    @PostMapping("/join")
+    public ResponseEntity<CampaignResponse> join(@RequestBody JoinByCodeRequest req,
+                                                 Authentication auth) {
+        return ResponseEntity.ok(service.joinByCode(req.code(), auth));
+    }
+
 }

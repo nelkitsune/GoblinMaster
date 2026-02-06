@@ -22,5 +22,8 @@ public class CampaignMember {
     @Column(nullable=false, length=16)
     private CampaignRole role;
 
+    @Column(name = "joined_at", nullable = false, insertable = false, updatable = false)
+    private java.time.Instant joinedAt;
+
     public enum CampaignRole { OWNER, PLAYER }
 }

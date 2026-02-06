@@ -34,21 +34,42 @@ public class AuthService {
                 .password(encoder.encode(req.password()))
                 .role(User.Role.USER)
                 .build();
+        // Resolver posibles colisiones de userCode
+        int tries = 0;
+        while (tries < 5) {
+            if (u.getUserCode() == null || users.findByUserCode(u.getUserCode()).isPresent()) {
+                String rand = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 8).toUpperCase();
+                u.setUserCode("USR-" + rand);
+                tries++;
+            } else {
+                break;
+            }
+        }
+        if (users.findByUserCode(u.getUserCode()).isPresent()) {
+            throw new IllegalStateException("No se pudo generar un userCode único");
+        }
         users.save(u);
 
         UserDetails ud = new org.springframework.security.core.userdetails.User(
                 u.getEmail(), u.getPassword(),
                 List.of(new SimpleGrantedAuthority("ROLE_" + u.getRole().name()))
         );
-        return new AuthResponse(jwt.generateToken(ud));
+        String token = jwt.generateToken(ud);
+        return new AuthResponse(token, u.getUserCode(), u.isActive());
     }
 
     public AuthResponse login(LoginRequest req) {
+        // verificar que el usuario esté activo
+        User u = users.findByEmail(req.email()).orElseThrow();
+        if (!u.isActive()) {
+            throw new IllegalStateException("Usuario inactivo");
+        }
         authManager.authenticate(new UsernamePasswordAuthenticationToken(req.email(), req.password()));
         UserDetails ud = new org.springframework.security.core.userdetails.User(
-                req.email(), users.findByEmail(req.email()).orElseThrow().getPassword(),
+                req.email(), u.getPassword(),
                 java.util.List.of()
         );
-        return new AuthResponse(jwt.generateToken(ud));
+        String token = jwt.generateToken(ud);
+        return new AuthResponse(token, u.getUserCode(), u.isActive());
     }
 }

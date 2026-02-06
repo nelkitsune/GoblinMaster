@@ -1,6 +1,7 @@
 // auth/JwtAuthenticationFilter.java
-package ar.utn.tup.goblinmaster.auth;
+package ar.utn.tup.goblinmaster.auth.dto;
 
+import ar.utn.tup.goblinmaster.auth.JwtService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.*;
@@ -33,14 +34,18 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             token = header.substring(7);
         }
 
-        if (token != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            String username = jwtService.extractUsername(token);
-            UserDetails user = userDetailsService.loadUserByUsername(username);
-            if (jwtService.isValid(token, user)) {
-                var auth = new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities());
-                auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                SecurityContextHolder.getContext().setAuthentication(auth);
+        try {
+            if (token != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                String username = jwtService.extractUsername(token);
+                UserDetails user = userDetailsService.loadUserByUsername(username);
+                if (jwtService.isValid(token, user)) {
+                    var auth = new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities());
+                    auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    SecurityContextHolder.getContext().setAuthentication(auth);
+                }
             }
+        } catch (io.jsonwebtoken.JwtException | IllegalArgumentException ex) {
+            // Token inválido o malformado: continuar sin autenticar
         }
         chain.doFilter(request, response);
     }
