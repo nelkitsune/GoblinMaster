@@ -35,7 +35,8 @@ public class SecurityConfig {
         http.sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
         http.authorizeHttpRequests(auth -> auth
                 .requestMatchers(
-                        "/auth/**",
+                        "/auth/login",
+                        "/auth/register",
                         "/error",
                         "/actuator/health",
                         "/v3/api-docs/**",

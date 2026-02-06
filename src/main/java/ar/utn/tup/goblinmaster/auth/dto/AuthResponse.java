@@ -1,3 +1,5 @@
 package ar.utn.tup.goblinmaster.auth.dto;
 
-public record AuthResponse(String accessToken, String userCode, boolean active) {}
+import ar.utn.tup.goblinmaster.users.dto.UserDto;
+
+public record AuthResponse(String token, UserDto user) {}

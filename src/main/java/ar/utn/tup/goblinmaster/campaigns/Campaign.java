@@ -1,5 +1,6 @@
 package ar.utn.tup.goblinmaster.campaigns;
 
+import ar.utn.tup.goblinmaster.characters.Character;
 import ar.utn.tup.goblinmaster.users.User;
 import jakarta.persistence.*;
 import lombok.*;
@@ -60,6 +61,9 @@ public class Campaign {
 
     @OneToMany(mappedBy = "campaign", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<CampaignMember> members = new HashSet<>();
+
+    @OneToMany(mappedBy = "campaign", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<CampaignCharacter> characters = new HashSet<>();
 
     @PrePersist
     void prePersist(){

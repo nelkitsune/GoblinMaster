@@ -3,6 +3,8 @@ package ar.utn.tup.goblinmaster.auth;
 
 import ar.utn.tup.goblinmaster.auth.dto.*;
 import ar.utn.tup.goblinmaster.users.UserRepository;
+import ar.utn.tup.goblinmaster.users.dto.UserDto;
+import org.modelmapper.ModelMapper;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.validation.annotation.Validated;
@@ -14,9 +16,10 @@ public class AuthController {
 
     private final AuthService auth;
     private final UserRepository users;
+    private final ModelMapper mapper;
 
-    public AuthController(AuthService auth, UserRepository users) {
-        this.auth = auth; this.users = users;
+    public AuthController(AuthService auth, UserRepository users, ModelMapper mapper) {
+        this.auth = auth; this.users = users; this.mapper = mapper;
     }
 
     @PostMapping("/auth/register")
@@ -29,9 +32,9 @@ public class AuthController {
         return ResponseEntity.ok(auth.login(req));
     }
 
-    @GetMapping("/me")
-    public ResponseEntity<?> me(Authentication authn) {
-        // authn.getName() == email del usuario logueado
-        return ResponseEntity.ok(users.findByEmail(authn.getName()).orElseThrow());
+    @GetMapping("/auth/me")
+    public ResponseEntity<UserDto> me(Authentication authn) {
+        var user = users.findByEmail(authn.getName()).orElseThrow(() -> new IllegalStateException("Usuario no encontrado"));
+        return ResponseEntity.ok(mapper.map(user, UserDto.class));
     }
 }

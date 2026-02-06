@@ -4,6 +4,8 @@ package ar.utn.tup.goblinmaster.auth;
 import ar.utn.tup.goblinmaster.auth.dto.*;
 import ar.utn.tup.goblinmaster.users.User;
 import ar.utn.tup.goblinmaster.users.UserRepository;
+import ar.utn.tup.goblinmaster.users.dto.UserDto;
+import org.modelmapper.ModelMapper;
 import org.springframework.security.authentication.*;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -18,10 +20,11 @@ public class AuthService {
     private final PasswordEncoder encoder;
     private final AuthenticationManager authManager;
     private final JwtService jwt;
+    private final ModelMapper mapper;
 
     public AuthService(UserRepository users, PasswordEncoder encoder,
-                       AuthenticationManager authManager, JwtService jwt) {
-        this.users = users; this.encoder = encoder; this.authManager = authManager; this.jwt = jwt;
+                       AuthenticationManager authManager, JwtService jwt, ModelMapper mapper) {
+        this.users = users; this.encoder = encoder; this.authManager = authManager; this.jwt = jwt; this.mapper = mapper;
     }
 
     public AuthResponse register(RegisterRequest req) {
@@ -55,7 +58,8 @@ public class AuthService {
                 List.of(new SimpleGrantedAuthority("ROLE_" + u.getRole().name()))
         );
         String token = jwt.generateToken(ud);
-        return new AuthResponse(token, u.getUserCode(), u.isActive());
+        UserDto dto = mapper.map(u, UserDto.class);
+        return new AuthResponse(token, dto);
     }
 
     public AuthResponse login(LoginRequest req) {
@@ -70,6 +74,7 @@ public class AuthService {
                 java.util.List.of()
         );
         String token = jwt.generateToken(ud);
-        return new AuthResponse(token, u.getUserCode(), u.isActive());
+        UserDto dto = mapper.map(u, UserDto.class);
+        return new AuthResponse(token, dto);
     }
 }

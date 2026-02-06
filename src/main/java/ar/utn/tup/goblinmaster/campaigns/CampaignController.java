@@ -85,4 +85,15 @@ public class CampaignController {
         return ResponseEntity.ok(service.joinByCode(req.code(), auth));
     }
 
+    @GetMapping("/{id}/characters")
+    public ResponseEntity<List<CampaignCharacterResponse>> listCharacters(@PathVariable Long id, Authentication auth) {
+        return ResponseEntity.ok(service.listCampaignCharacters(id, auth));
+    }
+
+    @DeleteMapping("/{id}/characters/{characterId}")
+    public ResponseEntity<Void> removeCharacter(@PathVariable Long id, @PathVariable Long characterId, Authentication auth) {
+        service.removeCharacterFromCampaign(id, characterId, auth);
+        return ResponseEntity.noContent().build();
+    }
+
 }

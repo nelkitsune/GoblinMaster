@@ -22,9 +22,11 @@ public class CampaignService {
     private final CampaignRepository campaigns;
     private final CampaignMemberRepository members;
     private final UserRepository users;
+    private final CampaignCharacterRepository campaignCharacters;
 
-    public CampaignService(CampaignRepository campaigns, CampaignMemberRepository members, UserRepository users) {
-        this.campaigns = campaigns; this.members = members; this.users = users;
+    public CampaignService(CampaignRepository campaigns, CampaignMemberRepository members, UserRepository users,
+                           CampaignCharacterRepository campaignCharacters) {
+        this.campaigns = campaigns; this.members = members; this.users = users; this.campaignCharacters = campaignCharacters;
     }
 
     private User me(Authentication auth) {
@@ -58,6 +60,8 @@ public class CampaignService {
                 .description(req.description())
                 .owner(owner)
                 .active(true)
+                .system(req.game_system())
+                .setting(req.setting())
                 .joinCode(generateJoinCode())
                 .build();
         Campaign saved = campaigns.save(c);
@@ -94,6 +98,23 @@ public class CampaignService {
                         m.getUser().getId(),
                         m.getUser().getEmail(),
                         m.getRole().name()))
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<CampaignCharacterResponse> listCampaignCharacters(Long campaignId, Authentication auth) {
+        ensureMember(campaignId, auth);
+        return campaignCharacters.findAllByCampaignId(campaignId).stream()
+                .filter(cc -> cc.getDeletedAt() == null)
+                .map(cc -> new CampaignCharacterResponse(
+                        cc.getId(),
+                        cc.getCampaign().getId(),
+                        cc.getCharacter().getId(),
+                        cc.getCharacter().getName(),
+                        Boolean.TRUE.equals(cc.getCharacter().getIsNpc()),
+                        cc.getCharacter().getDeletedAt(),
+                        cc.getCharacter().getDeletedAt() != null
+                ))
                 .toList();
     }
 
@@ -171,6 +192,13 @@ public class CampaignService {
         return toDto(campaign);
     }
 
+    @Transactional
+    public void removeCharacterFromCampaign(Long campaignId, Long characterId, Authentication auth) {
+        ensureOwner(campaignId, auth);
+        var ccOpt = campaignCharacters.findByCampaignIdAndCharacterId(campaignId, characterId);
+        ccOpt.ifPresent(cc -> { cc.setDeletedAt(Instant.now()); campaignCharacters.save(cc); });
+    }
+
     // ------- helpers -------
     private void ensureMember(Long campaignId, Authentication auth) {
         boolean isMember = members.findByCampaignIdAndUserEmail(campaignId, auth.getName()).isPresent();
@@ -214,6 +242,7 @@ public class CampaignService {
         if (req.name() != null && !req.name().isBlank()) c.setName(req.name());
         if (req.description() != null) c.setDescription(req.description());
         if (req.game_system() != null) c.setSystem(req.game_system());
+        if (req.setting() != null) c.setSetting(req.setting());
         if (req.imageUrl() != null) c.setImageUrl(req.imageUrl());
         if (req.active() != null) {
             c.setActive(req.active());
