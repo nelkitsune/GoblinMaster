@@ -9,6 +9,12 @@ import ar.utn.tup.goblinmaster.feats.entity.PrereqGroup;
 import ar.utn.tup.goblinmaster.feats.entity.PrereqCondition;
 import ar.utn.tup.goblinmaster.feats.mapper.FeatsMapper;
 import ar.utn.tup.goblinmaster.feats.repository.FeatsRepository;
+import ar.utn.tup.goblinmaster.campaigns.CampaignMemberRepository;
+import ar.utn.tup.goblinmaster.campaigns.CampaignMember.CampaignRole;
+import ar.utn.tup.goblinmaster.campaigns.CampaignRepository;
+import ar.utn.tup.goblinmaster.feats.entity.CampaignFeat;
+import ar.utn.tup.goblinmaster.feats.repository.CampaignFeatRepository;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import lombok.RequiredArgsConstructor;
 
@@ -22,6 +28,9 @@ import java.util.HashMap;
 public class FeatsServiceImpl implements FeatsService {
 
     private final FeatsRepository featsRepository;
+    private final CampaignFeatRepository campaignFeatRepository;
+    private final CampaignRepository campaignRepository;
+    private final CampaignMemberRepository campaignMemberRepository;
 
     @Override
     public FeatsResponse createFeat(FeatsRequest request) {
@@ -69,5 +78,43 @@ public class FeatsServiceImpl implements FeatsService {
         Feats feat = featsRepository.findByIdConPrereqs(id)
                 .orElseThrow(() -> new RuntimeException("Feat not found with id: " + id));
         return FeatsMapper.toResponse(feat);
+    }
+
+    @Override
+    public List<FeatsResponse> mine(Authentication auth) {
+        var email = auth.getName();
+        return featsRepository.findByOwnerEmail(email).stream()
+                .map(FeatsMapper::toResponse)
+                .toList();
+    }
+
+    @Override
+    public void enableInCampaign(Long featId, Long campaignId, Authentication auth) {
+        var campaign = campaignRepository.findById(campaignId).orElseThrow();
+        boolean isOwner = campaignMemberRepository.existsByCampaignIdAndUserEmailAndRole(campaignId, auth.getName(), CampaignRole.OWNER);
+        if (!isOwner) throw new SecurityException("No autorizado para modificar la campaña");
+        Feats f = featsRepository.findById(featId).orElseThrow();
+        if (f.getOwner() == null) throw new IllegalArgumentException("Solo se puede habilitar homebrew");
+        if (!f.getOwner().getEmail().equals(auth.getName())) throw new SecurityException("Homebrew ajeno");
+        if (!campaignFeatRepository.existsByCampaignIdAndFeatId(campaignId, featId)) {
+            CampaignFeat cf = CampaignFeat.builder().campaign(campaign).feat(f).build();
+            campaignFeatRepository.save(cf);
+        }
+    }
+
+    @Override
+    public List<FeatsResponse> listCampaignHomebrew(Long campaignId, Authentication auth) {
+        boolean isMember = campaignMemberRepository.findByCampaignIdAndUserEmail(campaignId, auth.getName()).isPresent();
+        if (!isMember) throw new SecurityException("No perteneces a la campaña");
+        return campaignFeatRepository.findAllByCampaignId(campaignId).stream()
+                .map(cf -> FeatsMapper.toResponse(cf.getFeat()))
+                .toList();
+    }
+
+    @Override
+    public void disableInCampaign(Long campaignId, Long featId, Authentication auth) {
+        boolean isOwner = campaignMemberRepository.existsByCampaignIdAndUserEmailAndRole(campaignId, auth.getName(), CampaignRole.OWNER);
+        if (!isOwner) throw new SecurityException("No autorizado para modificar la campaña");
+        campaignFeatRepository.deleteByCampaignIdAndFeatId(campaignId, featId);
     }
 }

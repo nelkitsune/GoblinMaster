@@ -26,6 +26,7 @@ public interface FeatsRepository extends JpaRepository<Feats, Long> {
       left join fetch pg.conditions c
       """)
     List<Feats> findAllConPrereqs();
+
+    @Query("SELECT f FROM Feats f WHERE f.owner.email = :email")
+    List<Feats> findByOwnerEmail(@Param("email") String email);
 }
-
-

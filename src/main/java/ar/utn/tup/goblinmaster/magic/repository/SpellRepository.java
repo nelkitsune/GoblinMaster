@@ -22,4 +22,7 @@ public interface SpellRepository extends JpaRepository<Spell, Long>, JpaSpecific
 
     @Query("SELECT s FROM Spell s JOIN SpellClassLevel scl ON s.id = scl.spell.id WHERE scl.spellClass.id = :classId AND scl.level = :level ORDER BY s.name")
     List<Spell> findBySpellClassIdAndLevel(@Param("classId") Long classId, @Param("level") Integer level);
+
+    @Query("SELECT s FROM Spell s WHERE s.owner.email = :email")
+    List<Spell> findByOwnerEmail(@Param("email") String email);
 }

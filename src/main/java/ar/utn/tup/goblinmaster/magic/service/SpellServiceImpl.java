@@ -9,6 +9,11 @@ import ar.utn.tup.goblinmaster.magic.repository.SpellClassLevelRepository;
 import ar.utn.tup.goblinmaster.magic.repository.SpellClassRepository;
 import ar.utn.tup.goblinmaster.magic.repository.SpellRepository;
 import ar.utn.tup.goblinmaster.magic.repository.SpellSchoolRepository;
+import ar.utn.tup.goblinmaster.magic.repository.CampaignSpellRepository;
+import ar.utn.tup.goblinmaster.campaigns.CampaignRepository;
+import ar.utn.tup.goblinmaster.campaigns.CampaignMemberRepository;
+import ar.utn.tup.goblinmaster.campaigns.CampaignMember.CampaignRole;
+import org.springframework.security.core.Authentication;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -27,6 +32,9 @@ public class SpellServiceImpl implements SpellService {
     private final SpellClassRepository classRepo;
     private final SpellClassLevelRepository sclRepo;
     private final SpellMapper mapper;
+    private final CampaignSpellRepository campaignSpellRepo;
+    private final CampaignRepository campaignRepo;
+    private final CampaignMemberRepository campaignMemberRepo;
 
     @Override
     public SpellResponse create(SpellRequest req) {
@@ -143,5 +151,55 @@ public class SpellServiceImpl implements SpellService {
     @Override
     public void delete(Long id) {
         spellRepo.deleteById(id);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<SpellListItem> mine(Authentication auth) {
+        var email = auth.getName();
+        // owner es User; filtramos por owner email usando repo método auxiliar
+        List<Spell> spells = spellRepo.findByOwnerEmail(email);
+        return spells.stream()
+                .map(spell -> mapper.toListItem(spell, sclRepo.findBySpellId(spell.getId())))
+                .collect(java.util.stream.Collectors.toList());
+    }
+
+    @Override
+    public void enableInCampaign(Long spellId, Long campaignId, Authentication auth) {
+        // validar campaña existe
+        var campaign = campaignRepo.findById(campaignId).orElseThrow();
+        // validar permisos OWNER
+        boolean isOwner = campaignMemberRepo.existsByCampaignIdAndUserEmailAndRole(campaignId, auth.getName(), CampaignRole.OWNER);
+        if (!isOwner) throw new SecurityException("No autorizado para modificar la campaña");
+        // validar spell existe y es homebrew del usuario
+        Spell s = spellRepo.findById(spellId).orElseThrow();
+        if (s.getOwner() == null) throw new IllegalArgumentException("Solo se puede habilitar homebrew");
+        if (!s.getOwner().getEmail().equals(auth.getName())) throw new SecurityException("Homebrew ajeno");
+        // idempotente
+        if (!campaignSpellRepo.existsByCampaignIdAndSpellId(campaignId, spellId)) {
+            ar.utn.tup.goblinmaster.magic.entity.CampaignSpell cs = ar.utn.tup.goblinmaster.magic.entity.CampaignSpell.builder()
+                    .campaign(campaign)
+                    .spell(s)
+                    .build();
+            campaignSpellRepo.save(cs);
+        }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<SpellListItem> listCampaignHomebrew(Long campaignId, Authentication auth) {
+        // validar miembro
+        boolean isMember = campaignMemberRepo.findByCampaignIdAndUserEmail(campaignId, auth.getName()).isPresent();
+        if (!isMember) throw new SecurityException("No perteneces a la campaña");
+        return campaignSpellRepo.findAllByCampaignId(campaignId).stream()
+                .map(cs -> mapper.toListItem(cs.getSpell(), sclRepo.findBySpellId(cs.getSpell().getId())))
+                .collect(java.util.stream.Collectors.toList());
+    }
+
+    @Override
+    public void disableInCampaign(Long campaignId, Long spellId, Authentication auth) {
+        boolean isOwner = campaignMemberRepo.existsByCampaignIdAndUserEmailAndRole(campaignId, auth.getName(), CampaignRole.OWNER);
+        if (!isOwner) throw new SecurityException("No autorizado para modificar la campaña");
+        campaignSpellRepo.deleteByCampaignIdAndSpellId(campaignId, spellId);
     }
 }
