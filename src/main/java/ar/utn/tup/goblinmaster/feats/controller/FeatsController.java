@@ -20,8 +20,8 @@ public class FeatsController {
     }
 
     @PostMapping
-    public void createFeat(@RequestBody FeatsRequest request) {
-        service.createFeat(request);
+    public void createFeat(@RequestBody FeatsRequest request, Authentication auth) {
+        service.createFeat(request, auth);
     }
 
     @GetMapping
@@ -57,5 +57,10 @@ public class FeatsController {
                                                   Authentication auth) {
         service.disableInCampaign(campaignId, featId, auth);
         return ResponseEntity.noContent().build();
+    }
+
+    @PutMapping("/{id}")
+    public FeatsResponse updateFeat(@PathVariable Long id, @RequestBody FeatsRequest request, Authentication auth) {
+        return service.updateFeat(id, request, auth);
     }
 }

@@ -13,6 +13,7 @@ import ar.utn.tup.goblinmaster.magic.repository.CampaignSpellRepository;
 import ar.utn.tup.goblinmaster.campaigns.CampaignRepository;
 import ar.utn.tup.goblinmaster.campaigns.CampaignMemberRepository;
 import ar.utn.tup.goblinmaster.campaigns.CampaignMember.CampaignRole;
+import ar.utn.tup.goblinmaster.users.UserRepository;
 import org.springframework.security.core.Authentication;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -35,9 +36,12 @@ public class SpellServiceImpl implements SpellService {
     private final CampaignSpellRepository campaignSpellRepo;
     private final CampaignRepository campaignRepo;
     private final CampaignMemberRepository campaignMemberRepo;
+    private final UserRepository userRepository;
 
     @Override
-    public SpellResponse create(SpellRequest req) {
+    public SpellResponse create(SpellRequest req, Authentication auth) {
+        if (auth == null || auth.getName() == null) throw new SecurityException("No autenticado");
+        var owner = userRepository.findByEmail(auth.getName()).orElseThrow(() -> new SecurityException("Usuario no encontrado"));
         SpellSchool school = schoolRepo.findByCode(req.getSchoolCode())
                 .orElseThrow(() -> new IllegalArgumentException("schoolCode inválido"));
 
@@ -57,6 +61,7 @@ public class SpellServiceImpl implements SpellService {
         s.setMaterialDesc(req.getMaterialDesc());
         s.setSource(req.getSource());
         s.setDescription(req.getDescription());
+        s.setOwner(owner);
 
         s = spellRepo.save(s);
 
@@ -110,9 +115,12 @@ public class SpellServiceImpl implements SpellService {
     }
 
     @Override
-    public SpellResponse update(Long id, SpellRequest req) {
+    public SpellResponse update(Long id, SpellRequest req, Authentication auth) {
+        if (auth == null || auth.getName() == null) throw new SecurityException("No autenticado");
         Spell s = spellRepo.findById(id).orElseThrow();
-
+        if (s.getOwner() == null || !auth.getName().equals(s.getOwner().getEmail())) {
+            throw new SecurityException("No sos el dueño del homebrew");
+        }
         SpellSchool school = schoolRepo.findByCode(req.getSchoolCode())
                 .orElseThrow(() -> new IllegalArgumentException("schoolCode inválido"));
 
@@ -149,7 +157,12 @@ public class SpellServiceImpl implements SpellService {
     }
 
     @Override
-    public void delete(Long id) {
+    public void delete(Long id, Authentication auth) {
+        if (auth == null || auth.getName() == null) throw new SecurityException("No autenticado");
+        Spell s = spellRepo.findById(id).orElseThrow();
+        if (s.getOwner() == null || !auth.getName().equals(s.getOwner().getEmail())) {
+            throw new SecurityException("No sos el dueño del homebrew");
+        }
         spellRepo.deleteById(id);
     }
 

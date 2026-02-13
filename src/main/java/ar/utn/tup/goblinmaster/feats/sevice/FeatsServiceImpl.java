@@ -14,6 +14,8 @@ import ar.utn.tup.goblinmaster.campaigns.CampaignMember.CampaignRole;
 import ar.utn.tup.goblinmaster.campaigns.CampaignRepository;
 import ar.utn.tup.goblinmaster.feats.entity.CampaignFeat;
 import ar.utn.tup.goblinmaster.feats.repository.CampaignFeatRepository;
+import ar.utn.tup.goblinmaster.users.UserRepository;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import lombok.RequiredArgsConstructor;
@@ -31,10 +33,26 @@ public class FeatsServiceImpl implements FeatsService {
     private final CampaignFeatRepository campaignFeatRepository;
     private final CampaignRepository campaignRepository;
     private final CampaignMemberRepository campaignMemberRepository;
+    private final UserRepository userRepository;
+
+    private Long getUserIdFromAuth(Authentication auth) {
+        if (auth == null || auth.getName() == null) {
+            throw new AccessDeniedException("No autenticado");
+        }
+        return userRepository.findByEmail(auth.getName())
+                .map(ar.utn.tup.goblinmaster.users.User::getId)
+                .orElseThrow(() -> new AccessDeniedException("Usuario no encontrado"));
+    }
 
     @Override
-    public FeatsResponse createFeat(FeatsRequest request) {
+    public FeatsResponse createFeat(FeatsRequest request, Authentication auth) {
+        if (auth == null || auth.getName() == null) {
+            throw new SecurityException("No autenticado");
+        }
+        var owner = userRepository.findByEmail(auth.getName())
+                .orElseThrow(() -> new SecurityException("Usuario no encontrado"));
         Feats feat = FeatsMapper.toEntity(request);
+        feat.setOwner(owner);
 
         // Crear y asociar grupos y condiciones (fusionando mismos groupIndex)
         if (request.getPrereqGroups() != null) {
@@ -69,7 +87,7 @@ public class FeatsServiceImpl implements FeatsService {
 
     @Override
     public List<FeatsResponse> getAllFeats() {
-        return featsRepository.findAllConPrereqs().stream()
+        return featsRepository.findAllOfficialConPrereqs().stream()
                 .map(FeatsMapper::toResponse)
                 .toList();
     }
@@ -83,7 +101,7 @@ public class FeatsServiceImpl implements FeatsService {
     @Override
     public List<FeatsResponse> mine(Authentication auth) {
         var email = auth.getName();
-        return featsRepository.findByOwnerEmail(email).stream()
+        return featsRepository.findByOwnerEmailConPrereqs(email).stream()
                 .map(FeatsMapper::toResponse)
                 .toList();
     }
@@ -116,5 +134,58 @@ public class FeatsServiceImpl implements FeatsService {
         boolean isOwner = campaignMemberRepository.existsByCampaignIdAndUserEmailAndRole(campaignId, auth.getName(), CampaignRole.OWNER);
         if (!isOwner) throw new SecurityException("No autorizado para modificar la campaña");
         campaignFeatRepository.deleteByCampaignIdAndFeatId(campaignId, featId);
+    }
+
+    @Override
+    public FeatsResponse updateFeat(Long id, FeatsRequest request, Authentication auth) {
+        Long requesterId = getUserIdFromAuth(auth);
+        Long ownerId = featsRepository.findOwnerUserIdByFeatId(id);
+        if (ownerId == null) {
+            throw new AccessDeniedException("No es una feat homebrew");
+        }
+        if (!ownerId.equals(requesterId)) {
+            throw new AccessDeniedException("No sos el dueño del homebrew");
+        }
+        // cargar feat con prereqs ya que pasó validación
+        Feats feat = featsRepository.findByIdConPrereqs(id)
+                .orElseThrow(() -> new RuntimeException("Feat not found with id: " + id));
+        // Actualizar campos permitidos desde request
+        feat.setName(request.getName());
+        feat.setOriginalName(request.getOriginalName());
+        feat.setCode(request.getCode());
+        feat.setSource(request.getSource());
+        feat.setBenefit(request.getBenefit());
+        feat.setSpecial(request.getSpecial());
+        feat.setDescripcion(request.getDescripcion());
+        if (request.getTipo() != null && !request.getTipo().isEmpty()) {
+            feat.setTipo(request.getTipo().get(0));
+        }
+        // Actualizar prereqGroups si vienen en request
+        if (request.getPrereqGroups() != null) {
+            // reemplazar grupos existentes por los nuevos mapeados
+            java.util.Set<ar.utn.tup.goblinmaster.feats.entity.PrereqGroup> nuevos = new java.util.HashSet<>();
+            for (ar.utn.tup.goblinmaster.feats.dto.PrereqGroupRequest groupReq : request.getPrereqGroups()) {
+                ar.utn.tup.goblinmaster.feats.entity.PrereqGroup group = new ar.utn.tup.goblinmaster.feats.entity.PrereqGroup();
+                group.setFeat(feat);
+                group.setGroupIndex(groupReq.getGroupIndex());
+                java.util.Set<ar.utn.tup.goblinmaster.feats.entity.PrereqCondition> conds = new java.util.HashSet<>();
+                if (groupReq.getConditions() != null) {
+                    for (ar.utn.tup.goblinmaster.feats.dto.PrereqConditionRequest condReq : groupReq.getConditions()) {
+                        ar.utn.tup.goblinmaster.feats.entity.PrereqCondition cond = new ar.utn.tup.goblinmaster.feats.entity.PrereqCondition();
+                        cond.setGroup(group);
+                        cond.setKind(condReq.getKind());
+                        cond.setFeatId(condReq.getFeatId());
+                        cond.setTarget(condReq.getTarget());
+                        cond.setIntValue(condReq.getIntValue());
+                        conds.add(cond);
+                    }
+                }
+                group.setConditions(conds);
+                nuevos.add(group);
+            }
+            feat.setPrereqGroups(nuevos);
+        }
+        Feats saved = featsRepository.save(feat);
+        return FeatsMapper.toResponse(saved);
     }
 }

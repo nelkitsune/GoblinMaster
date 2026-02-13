@@ -21,8 +21,8 @@ public class SpellController {
     private final SpellService service;
 
     @PostMapping
-    public ResponseEntity<SpellResponse> create(@Valid @RequestBody SpellRequest req) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(service.create(req));
+    public ResponseEntity<SpellResponse> create(@Valid @RequestBody SpellRequest req, org.springframework.security.core.Authentication auth) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(service.create(req, auth));
     }
 
     @GetMapping("/{id}")
@@ -56,14 +56,14 @@ public class SpellController {
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('campaign:write')")
-    public SpellResponse update(@PathVariable Long id, @Valid @RequestBody SpellRequest req) {
-        return service.update(id, req);
+    public SpellResponse update(@PathVariable Long id, @Valid @RequestBody SpellRequest req, org.springframework.security.core.Authentication auth) {
+        return service.update(id, req, auth);
     }
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('campaign:write')")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
-        service.delete(id); // o softDelete si dejaste ese nombre
+    public ResponseEntity<Void> delete(@PathVariable Long id, org.springframework.security.core.Authentication auth) {
+        service.delete(id, auth);
         return ResponseEntity.noContent().build();
     }
 

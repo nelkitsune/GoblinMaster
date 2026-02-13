@@ -8,9 +8,10 @@ import org.springframework.security.core.Authentication;
 import java.util.List;
 
 public interface FeatsService {
-    FeatsResponse createFeat(FeatsRequest request);
+    FeatsResponse createFeat(FeatsRequest request, Authentication auth);
     List<FeatsResponse> getAllFeats();
     FeatsResponse getFeatById(Long id);
+    FeatsResponse updateFeat(Long id, FeatsRequest request, Authentication auth);
 
     // Homebrew support
     List<FeatsResponse> mine(Authentication auth);
