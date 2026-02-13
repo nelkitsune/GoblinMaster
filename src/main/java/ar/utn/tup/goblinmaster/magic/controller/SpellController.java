@@ -55,7 +55,7 @@ public class SpellController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAuthority('campaign:write')")
+    @PreAuthorize("isAuthenticated()")
     public SpellResponse update(@PathVariable Long id, @Valid @RequestBody SpellRequest req, org.springframework.security.core.Authentication auth) {
         return service.update(id, req, auth);
     }

@@ -13,9 +13,17 @@ import java.util.List;
 public class RuleService {
     private final RuleRepository rules;
     private final ar.utn.tup.goblinmaster.users.UserRepository users;
+    // nuevos repos
+    private final ar.utn.tup.goblinmaster.campaigns.CampaignRepository campaignRepo;
+    private final ar.utn.tup.goblinmaster.campaigns.CampaignMemberRepository campaignMemberRepo;
+    private final ar.utn.tup.goblinmaster.rules.repository.CampaignRuleRepository campaignRuleRepo;
 
-    public RuleService(RuleRepository rules, ar.utn.tup.goblinmaster.users.UserRepository users) {
+    public RuleService(RuleRepository rules, ar.utn.tup.goblinmaster.users.UserRepository users,
+                       ar.utn.tup.goblinmaster.campaigns.CampaignRepository campaignRepo,
+                       ar.utn.tup.goblinmaster.campaigns.CampaignMemberRepository campaignMemberRepo,
+                       ar.utn.tup.goblinmaster.rules.repository.CampaignRuleRepository campaignRuleRepo) {
         this.rules = rules; this.users = users;
+        this.campaignRepo = campaignRepo; this.campaignMemberRepo = campaignMemberRepo; this.campaignRuleRepo = campaignRuleRepo;
     }
 
     private RuleResponse toResponse(Rule r) {
@@ -35,6 +43,23 @@ public class RuleService {
                 .pages(req.pages())
                 .books(req.books())
                 .owner(user)
+                .build();
+        r = rules.save(r);
+        return toResponse(r);
+    }
+
+    public RuleResponse createOfficialRule(RuleCreateRequest req, Authentication auth) {
+        var user = users.findByEmail(auth.getName()).orElseThrow();
+        if (user.getRole() != ar.utn.tup.goblinmaster.users.User.Role.ADMIN) {
+            throw new SecurityException("Solo ADMIN puede crear reglas oficiales");
+        }
+        Rule r = Rule.builder()
+                .name(req.name())
+                .originalName(req.originalName())
+                .description(req.description())
+                .pages(req.pages())
+                .books(req.books())
+                .owner(null)
                 .build();
         r = rules.save(r);
         return toResponse(r);
@@ -75,5 +100,35 @@ public class RuleService {
     public List<RuleResponse> listOfficialRules() {
         return rules.findByOwnerIsNull().stream().map(this::toResponse).toList();
     }
-}
 
+    public void enableInCampaign(Long ruleId, Long campaignId, Authentication auth) {
+        var campaign = campaignRepo.findById(campaignId).orElseThrow(() -> new java.util.NoSuchElementException("Campaña no encontrada"));
+        boolean isOwner = campaignMemberRepo.existsByCampaignIdAndUserEmailAndRole(campaignId, auth.getName(), ar.utn.tup.goblinmaster.campaigns.CampaignMember.CampaignRole.OWNER);
+        if (!isOwner) throw new SecurityException("No autorizado para modificar la campaña");
+        Rule r = rules.findById(ruleId).orElseThrow(() -> new java.util.NoSuchElementException("Regla no encontrada"));
+        if (r.getOwner() == null) throw new IllegalArgumentException("Solo se puede habilitar homebrew");
+        if (!r.getOwner().getEmail().equals(auth.getName())) throw new SecurityException("Homebrew ajeno");
+        if (!campaignRuleRepo.existsByCampaignIdAndRuleId(campaignId, ruleId)) {
+            ar.utn.tup.goblinmaster.rules.entity.CampaignRule cr = ar.utn.tup.goblinmaster.rules.entity.CampaignRule.builder()
+                    .campaign(campaign)
+                    .rule(r)
+                    .build();
+            campaignRuleRepo.save(cr);
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public java.util.List<ar.utn.tup.goblinmaster.rules.dto.RuleResponse> listCampaignHomebrew(Long campaignId, Authentication auth) {
+        boolean isMember = campaignMemberRepo.findByCampaignIdAndUserEmail(campaignId, auth.getName()).isPresent();
+        if (!isMember) throw new SecurityException("No perteneces a la campaña");
+        return campaignRuleRepo.findAllByCampaignId(campaignId).stream()
+                .map(cr -> this.toResponse(cr.getRule()))
+                .toList();
+    }
+
+    public void disableInCampaign(Long campaignId, Long ruleId, Authentication auth) {
+        boolean isOwner = campaignMemberRepo.existsByCampaignIdAndUserEmailAndRole(campaignId, auth.getName(), ar.utn.tup.goblinmaster.campaigns.CampaignMember.CampaignRole.OWNER);
+        if (!isOwner) throw new SecurityException("No autorizado para modificar la campaña");
+        campaignRuleRepo.deleteByCampaignIdAndRuleId(campaignId, ruleId);
+    }
+}

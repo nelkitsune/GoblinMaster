@@ -5,6 +5,7 @@ import ar.utn.tup.goblinmaster.rules.dto.RuleResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -41,5 +42,16 @@ public class RuleController {
     public ResponseEntity<Void> delete(@PathVariable Long id, Authentication auth) {
         service.deleteRule(id, auth);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping
+    public java.util.List<RuleResponse> listOfficial() {
+        return service.listOfficialRules();
+    }
+
+    @PostMapping("/official")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<RuleResponse> createOfficial(@Valid @RequestBody RuleCreateRequest req, Authentication auth) {
+        return ResponseEntity.ok(service.createOfficialRule(req, auth));
     }
 }

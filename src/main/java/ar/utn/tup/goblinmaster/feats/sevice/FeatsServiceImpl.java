@@ -18,6 +18,7 @@ import ar.utn.tup.goblinmaster.users.UserRepository;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 
 import java.util.List;
@@ -27,6 +28,7 @@ import java.util.HashMap;
 
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class FeatsServiceImpl implements FeatsService {
 
     private final FeatsRepository featsRepository;
