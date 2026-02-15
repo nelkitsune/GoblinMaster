@@ -1,5 +1,6 @@
 package ar.utn.tup.goblinmaster.feats.entity;
 
+import ar.utn.tup.goblinmaster.users.User;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -37,6 +38,10 @@ public class Feats {
 
     @Enumerated(EnumType.STRING)
     private Tipo tipo;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "owner_user_id")
+    private User owner; // null => oficial, no null => homebrew
 
     @OneToMany(mappedBy = "feat", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<PrereqGroup> prereqGroups = new HashSet<>();

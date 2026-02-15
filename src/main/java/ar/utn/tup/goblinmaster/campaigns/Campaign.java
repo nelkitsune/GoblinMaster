@@ -1,5 +1,6 @@
 package ar.utn.tup.goblinmaster.campaigns;
 
+import ar.utn.tup.goblinmaster.characters.Character;
 import ar.utn.tup.goblinmaster.users.User;
 import jakarta.persistence.*;
 import lombok.*;
@@ -55,8 +56,14 @@ public class Campaign {
     @Column(name = "deleted_at")
     private Instant deletedAt;
 
+    @Column(name = "image_public_id", length = 200)
+    private String imagePublicId; // nullable
+
     @OneToMany(mappedBy = "campaign", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<CampaignMember> members = new HashSet<>();
+
+    @OneToMany(mappedBy = "campaign", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<CampaignCharacter> characters = new HashSet<>();
 
     @PrePersist
     void prePersist(){

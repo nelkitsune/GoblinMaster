@@ -14,22 +14,22 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Random;
 
-import static java.util.stream.Collectors.toList;
-
 @Service
 public class CampaignService {
 
     private final CampaignRepository campaigns;
     private final CampaignMemberRepository members;
     private final UserRepository users;
+    private final CampaignCharacterRepository campaignCharacters;
 
-    public CampaignService(CampaignRepository campaigns, CampaignMemberRepository members, UserRepository users) {
-        this.campaigns = campaigns; this.members = members; this.users = users;
+    public CampaignService(CampaignRepository campaigns, CampaignMemberRepository members, UserRepository users,
+                           CampaignCharacterRepository campaignCharacters) {
+        this.campaigns = campaigns; this.members = members; this.users = users; this.campaignCharacters = campaignCharacters;
     }
 
     private User me(Authentication auth) {
-        // TODO: reemplazar por JWT cuando esté disponible
-        return users.findById(1L).orElseGet(() -> users.findByEmail(auth != null ? auth.getName() : null).orElseThrow());
+        if (auth == null || auth.getName() == null) throw new SecurityException("No autenticado");
+        return users.findByEmail(auth.getName()).orElseThrow();
     }
 
     private String generateJoinCode() {
@@ -58,6 +58,8 @@ public class CampaignService {
                 .description(req.description())
                 .owner(owner)
                 .active(true)
+                .system(req.game_system())
+                .setting(req.setting())
                 .joinCode(generateJoinCode())
                 .build();
         Campaign saved = campaigns.save(c);
@@ -94,6 +96,23 @@ public class CampaignService {
                         m.getUser().getId(),
                         m.getUser().getEmail(),
                         m.getRole().name()))
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<CampaignCharacterResponse> listCampaignCharacters(Long campaignId, Authentication auth) {
+        ensureMember(campaignId, auth);
+        return campaignCharacters.findAllByCampaignId(campaignId).stream()
+                .filter(cc -> cc.getDeletedAt() == null)
+                .map(cc -> new CampaignCharacterResponse(
+                        cc.getId(),
+                        cc.getCampaign().getId(),
+                        cc.getCharacter().getId(),
+                        cc.getCharacter().getName(),
+                        Boolean.TRUE.equals(cc.getCharacter().getIsNpc()),
+                        cc.getCharacter().getDeletedAt(),
+                        cc.getCharacter().getDeletedAt() != null
+                ))
                 .toList();
     }
 
@@ -153,6 +172,31 @@ public class CampaignService {
         campaigns.save(c); // flush por cascada si aplica
     }
 
+    @Transactional
+    public CampaignResponse joinByCode(String code, Authentication auth) {
+        if (code == null || code.isBlank()) throw new IllegalArgumentException("Código inválido");
+        User user = me(auth);
+        Campaign campaign = campaigns.findByJoinCode(code);
+        if (campaign == null) throw new IllegalArgumentException("Código no existe");
+        if (members.existsByCampaignIdAndUserId(campaign.getId(), user.getId())) {
+            throw new IllegalArgumentException("Ya eres miembro de esta campaña");
+        }
+        CampaignMember m = CampaignMember.builder()
+                .campaign(campaign)
+                .user(user)
+                .role(CampaignMember.CampaignRole.PLAYER)
+                .build();
+        members.save(m);
+        return toDto(campaign);
+    }
+
+    @Transactional
+    public void removeCharacterFromCampaign(Long campaignId, Long characterId, Authentication auth) {
+        ensureOwner(campaignId, auth);
+        var ccOpt = campaignCharacters.findByCampaignIdAndCharacterId(campaignId, characterId);
+        ccOpt.ifPresent(cc -> { cc.setDeletedAt(Instant.now()); campaignCharacters.save(cc); });
+    }
+
     // ------- helpers -------
     private void ensureMember(Long campaignId, Authentication auth) {
         boolean isMember = members.findByCampaignIdAndUserEmail(campaignId, auth.getName()).isPresent();
@@ -178,13 +222,45 @@ public class CampaignService {
                 c.getJoinCode(),
                 c.getCreatedAt(),
                 c.getUpdatedAt(),
-                c.getDeletedAt()
+                c.getDeletedAt(),
+                c.getMembers() != null ? c.getMembers().size() : 0
         );
     }
+
+    private CampaignResponse toDto(CampaignRepository.CampaignWithCount row) {
+        var c = row.getCampaign();
+        return new CampaignResponse(
+                c.getId(),
+                c.getName(),
+                c.getDescription(),
+                Boolean.TRUE.equals(c.getActive()),
+                c.getOwner().getId(),
+                c.getOwner().getEmail(),
+                c.getSystem(),
+                c.getSetting(),
+                c.getImageUrl(),
+                c.getJoinCode(),
+                c.getCreatedAt(),
+                c.getUpdatedAt(),
+                c.getDeletedAt(),
+                row.getMembersCount()
+        );
+    }
+
     @Transactional(readOnly = true)
-    public List<CampaignResponse> listUserCampaigns(Authentication auth) {
+    public List<CampaignResponse> listUserCampaignsFiltered(String status, String name, Authentication auth) {
         var user = users.findByEmail(auth.getName()).orElseThrow();
-        return campaigns.findAllByUserParticipation(user.getId())
+        Boolean active = null;
+        if (status != null && !status.isBlank()) {
+            switch (status.toLowerCase()) {
+                case "active" -> active = true;
+                case "archived" -> active = false;
+                case "all" -> active = null;
+                default -> throw new IllegalArgumentException("status inválido");
+            }
+        }
+        String nameFilter = (name == null || name.isBlank()) ? null : name.trim();
+        return campaigns.findUserCampaignsWithFilters(user.getId(), active, nameFilter)
                 .stream().map(this::toDto).toList();
     }
 
@@ -215,6 +291,15 @@ public class CampaignService {
         c.setActive(false);
         c.setDeletedAt(Instant.now());
         campaigns.save(c);
+    }
+
+    /**
+     * Verifica si el usuario actual puede editar imágenes de la campaña.
+     * TODO: Implementar validación real de roles/OWNER/GM.
+     */
+    public void assertCanEditImages(User currentUser, Campaign campaign) {
+        // TODO implementar: permitir si es owner o GM
+        // Por ahora, no hace nada para no bloquear el build
     }
 
 }

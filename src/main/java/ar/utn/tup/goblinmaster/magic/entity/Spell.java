@@ -1,5 +1,6 @@
 package ar.utn.tup.goblinmaster.magic.entity;
 
+import ar.utn.tup.goblinmaster.users.User;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -58,5 +59,8 @@ public class Spell {
 
     @Lob
     private String description;
-}
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "owner_user_id")
+    private User owner; // null => oficial, no null => homebrew
+}

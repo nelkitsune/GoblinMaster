@@ -21,8 +21,8 @@ public class SpellController {
     private final SpellService service;
 
     @PostMapping
-    public ResponseEntity<SpellResponse> create(@Valid @RequestBody SpellRequest req) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(service.create(req));
+    public ResponseEntity<SpellResponse> create(@Valid @RequestBody SpellRequest req, org.springframework.security.core.Authentication auth) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(service.create(req, auth));
     }
 
     @GetMapping("/{id}")
@@ -55,15 +55,40 @@ public class SpellController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAuthority('campaign:write')")
-    public SpellResponse update(@PathVariable Long id, @Valid @RequestBody SpellRequest req) {
-        return service.update(id, req);
+    @PreAuthorize("isAuthenticated()")
+    public SpellResponse update(@PathVariable Long id, @Valid @RequestBody SpellRequest req, org.springframework.security.core.Authentication auth) {
+        return service.update(id, req, auth);
     }
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('campaign:write')")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
-        service.delete(id); // o softDelete si dejaste ese nombre
+    public ResponseEntity<Void> delete(@PathVariable Long id, org.springframework.security.core.Authentication auth) {
+        service.delete(id, auth);
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/mine")
+    public List<SpellListItem> mine(org.springframework.security.core.Authentication auth) {
+        return service.mine(auth);
+    }
+
+    @PostMapping("/{id}/campaigns/{campaignId}")
+    public ResponseEntity<Void> enableInCampaign(@PathVariable Long id, @PathVariable Long campaignId,
+                                                 org.springframework.security.core.Authentication auth) {
+        service.enableInCampaign(id, campaignId, auth);
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/campaigns/{campaignId}/homebrew")
+    public List<SpellListItem> listCampaignHomebrew(@PathVariable Long campaignId,
+                                                    org.springframework.security.core.Authentication auth) {
+        return service.listCampaignHomebrew(campaignId, auth);
+    }
+
+    @DeleteMapping("/campaigns/{campaignId}/{spellId}")
+    public ResponseEntity<Void> disableInCampaign(@PathVariable Long campaignId, @PathVariable Long spellId,
+                                                  org.springframework.security.core.Authentication auth) {
+        service.disableInCampaign(campaignId, spellId, auth);
         return ResponseEntity.noContent().build();
     }
 }

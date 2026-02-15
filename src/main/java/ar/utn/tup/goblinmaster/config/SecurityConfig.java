@@ -35,14 +35,24 @@ public class SecurityConfig {
         http.sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
         http.authorizeHttpRequests(auth -> auth
                 .requestMatchers(
-                        "/auth/**",
                         "/error",
+                        "/api/error",
                         "/actuator/health",
                         "/v3/api-docs/**",
                         "/swagger-ui/**",
                         "/swagger-ui.html"
                 ).permitAll()
-                .requestMatchers(HttpMethod.GET, "/api/magic/spells/**", "/api/feats/**").permitAll()
+                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/register", "/auth/login", "/auth/register").permitAll()
+                // Magia: lectura pública
+                .requestMatchers(HttpMethod.GET,
+                        "/api/magic/spells/**",
+                        "/api/magic/spell-classes/**",
+                        "/api/magic/spell-class-levels/**",
+                        "/api/magic/spell-schools/**"
+                ).permitAll()
+                // Otros públicos existentes
+                .requestMatchers(HttpMethod.GET, "/api/feats/**").permitAll()
                 .anyRequest().authenticated()
         );
         http.addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
@@ -71,14 +81,15 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of("http://localhost:3000")); // cambiar o agregar orígenes según necesidad
-        config.setAllowedMethods(List.of("GET","POST","PUT","DELETE","OPTIONS"));
+        config.setAllowedOrigins(List.of("http://localhost:3000")); // ajustar orígenes del front
+        config.setAllowedMethods(List.of("GET","POST","PUT","PATCH","DELETE","OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        // Aplicar CORS a API y general para preflight
         source.registerCorsConfiguration("/api/**", config);
-        source.registerCorsConfiguration("/**", config); // opcional: aplica a otras rutas
+        source.registerCorsConfiguration("/**", config);
         return source;
     }
 }
