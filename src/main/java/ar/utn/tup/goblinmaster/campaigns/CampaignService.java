@@ -14,8 +14,6 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Random;
 
-import static java.util.stream.Collectors.toList;
-
 @Service
 public class CampaignService {
 
@@ -219,18 +217,50 @@ public class CampaignService {
                 c.getOwner().getId(),
                 c.getOwner().getEmail(),
                 c.getSystem(),
-                c.getSetting(), // agregado: setting
+                c.getSetting(),
                 c.getImageUrl(),
                 c.getJoinCode(),
                 c.getCreatedAt(),
                 c.getUpdatedAt(),
-                c.getDeletedAt()
+                c.getDeletedAt(),
+                c.getMembers() != null ? c.getMembers().size() : 0
         );
     }
+
+    private CampaignResponse toDto(CampaignRepository.CampaignWithCount row) {
+        var c = row.getCampaign();
+        return new CampaignResponse(
+                c.getId(),
+                c.getName(),
+                c.getDescription(),
+                Boolean.TRUE.equals(c.getActive()),
+                c.getOwner().getId(),
+                c.getOwner().getEmail(),
+                c.getSystem(),
+                c.getSetting(),
+                c.getImageUrl(),
+                c.getJoinCode(),
+                c.getCreatedAt(),
+                c.getUpdatedAt(),
+                c.getDeletedAt(),
+                row.getMembersCount()
+        );
+    }
+
     @Transactional(readOnly = true)
-    public List<CampaignResponse> listUserCampaigns(Authentication auth) {
+    public List<CampaignResponse> listUserCampaignsFiltered(String status, String name, Authentication auth) {
         var user = users.findByEmail(auth.getName()).orElseThrow();
-        return campaigns.findAllByUserParticipation(user.getId())
+        Boolean active = null;
+        if (status != null && !status.isBlank()) {
+            switch (status.toLowerCase()) {
+                case "active" -> active = true;
+                case "archived" -> active = false;
+                case "all" -> active = null;
+                default -> throw new IllegalArgumentException("status inválido");
+            }
+        }
+        String nameFilter = (name == null || name.isBlank()) ? null : name.trim();
+        return campaigns.findUserCampaignsWithFilters(user.getId(), active, nameFilter)
                 .stream().map(this::toDto).toList();
     }
 

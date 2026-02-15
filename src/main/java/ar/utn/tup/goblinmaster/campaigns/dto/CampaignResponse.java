@@ -16,5 +16,6 @@ public record CampaignResponse(
         String joinCode,
         Instant createdAt,
         Instant updatedAt,
-        Instant deletedAt
+        Instant deletedAt,
+        long membersCount
 ) { }

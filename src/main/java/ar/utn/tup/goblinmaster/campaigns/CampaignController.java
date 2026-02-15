@@ -24,8 +24,11 @@ public class CampaignController {
     }
 
     @GetMapping
-    public ResponseEntity<List<CampaignResponse>> mine(Authentication auth) {
-        return ResponseEntity.ok(service.myCampaigns(auth));
+    public ResponseEntity<List<CampaignResponse>> mine(Authentication auth,
+                                                       @RequestParam(required = false, defaultValue = "all") String status,
+                                                       @RequestParam(required = false) String name) {
+        var result = service.listUserCampaignsFiltered(status, name, auth);
+        return ResponseEntity.ok(result);
     }
 
     @PostMapping("/{id}/members")
@@ -75,7 +78,7 @@ public class CampaignController {
 
     @GetMapping("/my")
     public ResponseEntity<List<CampaignResponse>> listMyCampaigns(Authentication auth) {
-        var result = service.listUserCampaigns(auth);
+        var result = service.listUserCampaignsFiltered("all", null, auth);
         return ResponseEntity.ok(result);
     }
 
