@@ -21,6 +21,7 @@ public class SpellController {
     private final SpellService service;
 
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<SpellResponse> create(@Valid @RequestBody SpellRequest req, org.springframework.security.core.Authentication auth) {
         return ResponseEntity.status(HttpStatus.CREATED).body(service.create(req, auth));
     }
@@ -41,8 +42,9 @@ public class SpellController {
     @GetMapping("/by-class/{spellClassId}")
     @PreAuthorize("permitAll()")
     public List<SpellListItem> getBySpellClass(
-            @PathVariable Long spellClassId) {
-        return service.getBySpellClass(spellClassId);
+            @PathVariable Long spellClassId,
+            org.springframework.security.core.Authentication auth) {
+        return service.getBySpellClass(spellClassId, auth);
     }
 
     // SpellController.java
@@ -50,12 +52,13 @@ public class SpellController {
     @PreAuthorize("permitAll()")
     public List<SpellListItem> getBySpellClassAndLevel(
             @PathVariable Long spellClassId,
-            @PathVariable Integer level) {
-        return service.getBySpellClassAndLevel(spellClassId, level);
+            @PathVariable Integer level,
+            org.springframework.security.core.Authentication auth) {
+        return service.getBySpellClassAndLevel(spellClassId, level, auth);
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasRole('ADMIN')")
     public SpellResponse update(@PathVariable Long id, @Valid @RequestBody SpellRequest req, org.springframework.security.core.Authentication auth) {
         return service.update(id, req, auth);
     }

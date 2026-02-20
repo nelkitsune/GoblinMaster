@@ -57,7 +57,7 @@ public class AuthService {
                 u.getEmail(), u.getPassword(),
                 List.of(new SimpleGrantedAuthority("ROLE_" + u.getRole().name()))
         );
-        String token = jwt.generateToken(ud);
+        String token = jwt.generateToken(ud, u.getRole().name());
         UserDto dto = mapper.map(u, UserDto.class);
         return new AuthResponse(token, dto);
     }
@@ -73,7 +73,7 @@ public class AuthService {
                 req.email(), u.getPassword(),
                 java.util.List.of()
         );
-        String token = jwt.generateToken(ud);
+        String token = jwt.generateToken(ud, u.getRole().name());
         UserDto dto = mapper.map(u, UserDto.class);
         return new AuthResponse(token, dto);
     }

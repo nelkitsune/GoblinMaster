@@ -9,6 +9,9 @@ import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
 import java.util.Date;
+import java.util.Map;
+import java.util.HashMap;
+import java.util.function.Function;
 
 @Service
 public class JwtService {
@@ -37,8 +40,15 @@ public class JwtService {
     }
 
     public String generateToken(UserDetails user) {
+        return generateToken(user, null);
+    }
+
+    public String generateToken(UserDetails user, String role) {
         long now = System.currentTimeMillis();
+        Map<String, Object> claims = new HashMap<>();
+        if (role != null) claims.put("role", role);
         return Jwts.builder()
+                .setClaims(claims)
                 .setSubject(user.getUsername())
                 .setIssuedAt(new Date(now))
                 .setExpiration(new Date(now + expirationMs))
@@ -56,6 +66,20 @@ public class JwtService {
             return extractUsername(token).equals(user.getUsername());
         } catch (JwtException | IllegalArgumentException e) {
             return false;
+        }
+    }
+
+    public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
+        Claims claims = Jwts.parserBuilder().setSigningKey(key).build()
+                .parseClaimsJws(token).getBody();
+        return claimsResolver.apply(claims);
+    }
+
+    public String extractRole(String token) {
+        try {
+            return extractClaim(token, c -> c.get("role", String.class));
+        } catch (Exception ex) {
+            return null;
         }
     }
 }

@@ -24,4 +24,6 @@ public class FeatsRequest {
     private String descripcion;
     private List<Feats.Tipo> tipo;
     private List<PrereqGroupRequest> prereqGroups;
+    private Boolean official;
+    private String normal;
 }

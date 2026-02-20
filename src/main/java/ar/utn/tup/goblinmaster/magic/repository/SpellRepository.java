@@ -25,4 +25,30 @@ public interface SpellRepository extends JpaRepository<Spell, Long>, JpaSpecific
 
     @Query("SELECT s FROM Spell s WHERE s.owner.email = :email")
     List<Spell> findByOwnerEmail(@Param("email") String email);
+
+    @Query("""
+        SELECT s FROM Spell s
+        JOIN SpellClassLevel scl ON s.id = scl.spell.id
+        WHERE scl.spellClass.id = :classId
+          AND (s.owner IS NULL OR s.owner.email = :email)
+        ORDER BY s.name
+    """)
+    List<Spell> findBySpellClassIdFiltered(@Param("classId") Long classId, @Param("email") String email);
+
+    @Query("""
+        SELECT s FROM Spell s
+        JOIN SpellClassLevel scl ON s.id = scl.spell.id
+        WHERE scl.spellClass.id = :classId
+          AND scl.level = :level
+          AND (s.owner IS NULL OR s.owner.email = :email)
+        ORDER BY s.name
+    """)
+    List<Spell> findBySpellClassIdAndLevelFiltered(@Param("classId") Long classId, @Param("level") Integer level, @Param("email") String email);
+
+    // Solo oficiales (owner null)
+    @Query("SELECT s FROM Spell s JOIN SpellClassLevel scl ON s.id = scl.spell.id WHERE scl.spellClass.id = :classId AND s.owner IS NULL ORDER BY s.name")
+    List<Spell> findOfficialBySpellClassId(@Param("classId") Long classId);
+
+    @Query("SELECT s FROM Spell s JOIN SpellClassLevel scl ON s.id = scl.spell.id WHERE scl.spellClass.id = :classId AND scl.level = :level AND s.owner IS NULL ORDER BY s.name")
+    List<Spell> findOfficialBySpellClassIdAndLevel(@Param("classId") Long classId, @Param("level") Integer level);
 }

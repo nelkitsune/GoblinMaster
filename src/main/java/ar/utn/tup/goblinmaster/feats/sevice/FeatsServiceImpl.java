@@ -20,6 +20,11 @@ import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
+import ar.utn.tup.goblinmaster.feats.repository.FeatSpecifications;
+import ar.utn.tup.goblinmaster.feats.entity.Feats.Tipo;
 
 import java.util.List;
 import java.util.HashSet;
@@ -54,7 +59,16 @@ public class FeatsServiceImpl implements FeatsService {
         var owner = userRepository.findByEmail(auth.getName())
                 .orElseThrow(() -> new SecurityException("Usuario no encontrado"));
         Feats feat = FeatsMapper.toEntity(request);
-        feat.setOwner(owner);
+        // Asignar owner sólo si no es una feat oficial.
+        if (Boolean.TRUE.equals(request.getOfficial())) {
+            // Sólo admins pueden crear feats oficiales
+            if (owner.getRole() != ar.utn.tup.goblinmaster.users.User.Role.ADMIN) {
+                throw new AccessDeniedException("Solo admins pueden crear feats oficiales");
+            }
+            feat.setOwner(null);
+        } else {
+            feat.setOwner(owner);
+        }
 
         // Crear y asociar grupos y condiciones (fusionando mismos groupIndex)
         if (request.getPrereqGroups() != null) {
@@ -140,13 +154,19 @@ public class FeatsServiceImpl implements FeatsService {
 
     @Override
     public FeatsResponse updateFeat(Long id, FeatsRequest request, Authentication auth) {
-        Long requesterId = getUserIdFromAuth(auth);
+        if (auth == null || auth.getName() == null) throw new AccessDeniedException("No autenticado");
+        var requester = userRepository.findByEmail(auth.getName()).orElseThrow(() -> new AccessDeniedException("Usuario no encontrado"));
         Long ownerId = featsRepository.findOwnerUserIdByFeatId(id);
         if (ownerId == null) {
-            throw new AccessDeniedException("No es una feat homebrew");
-        }
-        if (!ownerId.equals(requesterId)) {
-            throw new AccessDeniedException("No sos el dueño del homebrew");
+            // feat oficial: solo admins pueden actualizar
+            if (requester.getRole() != ar.utn.tup.goblinmaster.users.User.Role.ADMIN) {
+                throw new AccessDeniedException("Solo admins pueden modificar feats oficiales");
+            }
+        } else {
+            // feat homebrew: owner o admin
+            if (!ownerId.equals(requester.getId()) && requester.getRole() != ar.utn.tup.goblinmaster.users.User.Role.ADMIN) {
+                throw new AccessDeniedException("No sos el dueño del homebrew");
+            }
         }
         // cargar feat con prereqs ya que pasó validación
         Feats feat = featsRepository.findByIdConPrereqs(id)
@@ -185,9 +205,51 @@ public class FeatsServiceImpl implements FeatsService {
                 group.setConditions(conds);
                 nuevos.add(group);
             }
-            feat.setPrereqGroups(nuevos);
+            // No reemplazar la colección completa (orphanRemoval requiere la misma instancia).
+            // Limpiar la colección existente y añadir los nuevos grupos asociándolos a la misma entidad.
+            feat.getPrereqGroups().clear();
+            for (PrereqGroup g : nuevos) {
+                g.setFeat(feat);
+            }
+            feat.getPrereqGroups().addAll(nuevos);
         }
         Feats saved = featsRepository.save(feat);
         return FeatsMapper.toResponse(saved);
     }
-}
+
+    @Override
+    public void deleteFeat(Long id, Authentication auth) {
+        if (auth == null || auth.getName() == null) {
+            throw new AccessDeniedException("No autenticado");
+        }
+        var requester = userRepository.findByEmail(auth.getName())
+                .orElseThrow(() -> new AccessDeniedException("Usuario no encontrado"));
+
+        Feats feat = featsRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Feat not found with id: " + id));
+
+        // owner null => feat oficial
+        if (feat.getOwner() == null) {
+            if (requester.getRole() != ar.utn.tup.goblinmaster.users.User.Role.ADMIN) {
+                throw new AccessDeniedException("Solo admins pueden eliminar feats oficiales");
+            }
+        } else {
+            // feat homebrew: solo owner o admin
+            if (!feat.getOwner().getId().equals(requester.getId()) && requester.getRole() != ar.utn.tup.goblinmaster.users.User.Role.ADMIN) {
+                throw new AccessDeniedException("No sos el dueño del homebrew");
+            }
+        }
+        featsRepository.deleteById(id);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<FeatsResponse> getFeats(Pageable pageable, java.util.Optional<java.util.List<Tipo>> tipos) {
+        Specification<Feats> spec = FeatSpecifications.ownerIsNull();
+        if (tipos != null && tipos.isPresent() && !tipos.get().isEmpty()) {
+            spec = spec.and(FeatSpecifications.hasTipoIn(tipos.get()));
+        }
+        return featsRepository.findAll(spec, pageable)
+                .map(FeatsMapper::toResponse);
+    }
+ }

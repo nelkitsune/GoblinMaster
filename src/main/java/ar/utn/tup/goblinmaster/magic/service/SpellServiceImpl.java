@@ -98,20 +98,22 @@ public class SpellServiceImpl implements SpellService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<SpellListItem> getBySpellClass(Long spellClassId) {
-        List<Spell> spells = spellRepo.findBySpellClassId(spellClassId);
+    public List<SpellListItem> getBySpellClass(Long spellClassId, Authentication auth) {
+        // Siempre solo oficiales (owner null)
+        List<Spell> spells = spellRepo.findOfficialBySpellClassId(spellClassId);
         return spells.stream()
                 .map(spell -> mapper.toListItem(spell, sclRepo.findBySpellId(spell.getId())))
-                .collect(Collectors.toList());
+                .collect(java.util.stream.Collectors.toList());
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<SpellListItem> getBySpellClassAndLevel(Long spellClassId, Integer level) {
-        List<Spell> spells = spellRepo.findBySpellClassIdAndLevel(spellClassId, level);
+    public List<SpellListItem> getBySpellClassAndLevel(Long spellClassId, Integer level, Authentication auth) {
+        // Siempre solo oficiales (owner null)
+        List<Spell> spells = spellRepo.findOfficialBySpellClassIdAndLevel(spellClassId, level);
         return spells.stream()
                 .map(spell -> mapper.toListItem(spell, sclRepo.findBySpellId(spell.getId())))
-                .collect(Collectors.toList());
+                .collect(java.util.stream.Collectors.toList());
     }
 
     @Override
@@ -228,3 +230,4 @@ public class SpellServiceImpl implements SpellService {
         campaignSpellRepo.deleteByCampaignIdAndSpellId(campaignId, spellId);
     }
 }
+

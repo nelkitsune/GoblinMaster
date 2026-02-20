@@ -39,6 +39,9 @@ public class Feats {
     @Enumerated(EnumType.STRING)
     private Tipo tipo;
 
+    @Column(name = "normal", columnDefinition = "TEXT")
+    private String normal;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "owner_user_id")
     private User owner; // null => oficial, no null => homebrew

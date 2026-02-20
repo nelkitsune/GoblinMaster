@@ -21,6 +21,7 @@ public class FeatsMapper {
         response.setBenefit(feats.getBenefit());
         response.setSpecial(feats.getSpecial());
         response.setTipo(List.of(feats.getTipo()));
+        response.setNormal(feats.getNormal());
         // mapear prerequisitos
         if (feats.getPrereqGroups() != null) {
             var groups = feats.getPrereqGroups().stream()
@@ -48,6 +49,7 @@ public class FeatsMapper {
         feats.setBenefit(request.getBenefit());
         feats.setSpecial(request.getSpecial());
         feats.setTipo(request.getTipo().isEmpty() ? null : request.getTipo().get(0));
+        feats.setNormal(request.getNormal());
         return feats;
     }
 }

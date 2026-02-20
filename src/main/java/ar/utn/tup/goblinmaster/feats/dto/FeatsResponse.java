@@ -18,6 +18,7 @@ public class FeatsResponse {
     private String benefit;
     private String special;
     private List<Feats.Tipo> tipo;
+    private String normal;
     private List<PrereqGroupResponse> prereqGroups;
 
 }
