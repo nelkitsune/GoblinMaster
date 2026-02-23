@@ -4,6 +4,9 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Entity @Table(name="spell_schools")
 @Getter @Setter
 public class SpellSchool {
@@ -15,4 +18,8 @@ public class SpellSchool {
 
     @Column(nullable = false)
     private String name;
+
+    // Relación a sub-escuelas
+    @OneToMany(mappedBy = "school", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<SpellSubschool> subschools = new ArrayList<>();
 }

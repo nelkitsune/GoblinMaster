@@ -24,6 +24,17 @@ public class SpellMapper {
         dto.setSchoolCode(s.getSchool().getCode());
         dto.setSchoolName(s.getSchool().getName());
 
+        if (s.getSubschool() != null) {
+            dto.setSubschoolId(s.getSubschool().getId());
+            dto.setSubschoolName(s.getSubschool().getName());
+        }
+
+        dto.setTarget(s.getTarget());
+
+        // componentes adicionales
+        dto.setComponentsF(s.isComponentsF());
+        dto.setComponentsDf(s.isComponentsDf());
+
         Map<String, Integer> classLevels = new LinkedHashMap<>();
         for (SpellClassLevel x : scl) {
             classLevels.put(x.getSpellClass().getCode(), x.getLevel());
@@ -39,6 +50,13 @@ public class SpellMapper {
         dto.setSchoolCode(s.getSchool().getCode());
         dto.setSchoolName(s.getSchool().getName());
         dto.setSummary(generarResumen(s.getDescription()));
+
+        if (s.getSubschool() != null) {
+            dto.setSubschoolId(s.getSubschool().getId());
+            dto.setSubschoolName(s.getSubschool().getName());
+        }
+
+        dto.setTarget(s.getTarget());
 
         Map<String, Integer> levels = new HashMap<>();
         for (SpellClassLevel x : scl) {

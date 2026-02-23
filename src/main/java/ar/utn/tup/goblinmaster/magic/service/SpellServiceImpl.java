@@ -10,6 +10,7 @@ import ar.utn.tup.goblinmaster.magic.repository.SpellClassRepository;
 import ar.utn.tup.goblinmaster.magic.repository.SpellRepository;
 import ar.utn.tup.goblinmaster.magic.repository.SpellSchoolRepository;
 import ar.utn.tup.goblinmaster.magic.repository.CampaignSpellRepository;
+import ar.utn.tup.goblinmaster.magic.repository.SpellSubschoolRepository;
 import ar.utn.tup.goblinmaster.campaigns.CampaignRepository;
 import ar.utn.tup.goblinmaster.campaigns.CampaignMemberRepository;
 import ar.utn.tup.goblinmaster.campaigns.CampaignMember.CampaignRole;
@@ -34,6 +35,7 @@ public class SpellServiceImpl implements SpellService {
     private final SpellClassLevelRepository sclRepo;
     private final SpellMapper mapper;
     private final CampaignSpellRepository campaignSpellRepo;
+    private final SpellSubschoolRepository subschoolRepo;
     private final CampaignRepository campaignRepo;
     private final CampaignMemberRepository campaignMemberRepo;
     private final UserRepository userRepository;
@@ -41,7 +43,7 @@ public class SpellServiceImpl implements SpellService {
     @Override
     public SpellResponse create(SpellRequest req, Authentication auth) {
         if (auth == null || auth.getName() == null) throw new SecurityException("No autenticado");
-        var owner = userRepository.findByEmail(auth.getName()).orElseThrow(() -> new SecurityException("Usuario no encontrado"));
+        var user = userRepository.findByEmail(auth.getName()).orElseThrow(() -> new SecurityException("Usuario no encontrado"));
         SpellSchool school = schoolRepo.findByCode(req.getSchoolCode())
                 .orElseThrow(() -> new IllegalArgumentException("schoolCode inválido"));
 
@@ -49,6 +51,16 @@ public class SpellServiceImpl implements SpellService {
         s.setName(req.getName());
         s.setOriginalName(req.getOriginalName());
         s.setSchool(school);
+        // subschool (opcional) - validar pertenencia
+        if (req.getSubschoolId() != null) {
+            var subs = subschoolRepo.findById(req.getSubschoolId()).orElseThrow(() ->
+                    new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.BAD_REQUEST, "subschoolId inválido"));
+            if (!subs.getSchool().getId().equals(school.getId())) {
+                throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.BAD_REQUEST, "subschoolId no pertenece a la school indicada");
+            }
+            s.setSubschool(subs);
+        }
+        s.setTarget(req.getTarget());
         s.setCastingTime(req.getCastingTime());
         s.setRangeText(req.getRangeText());
         s.setAreaText(req.getAreaText());
@@ -58,10 +70,20 @@ public class SpellServiceImpl implements SpellService {
         s.setComponentsV(Boolean.TRUE.equals(req.getComponentsV()));
         s.setComponentsS(Boolean.TRUE.equals(req.getComponentsS()));
         s.setComponentsM(Boolean.TRUE.equals(req.getComponentsM()));
+        s.setComponentsF(Boolean.TRUE.equals(req.getComponentsF()));
+        s.setComponentsDf(Boolean.TRUE.equals(req.getComponentsDf()));
         s.setMaterialDesc(req.getMaterialDesc());
         s.setSource(req.getSource());
         s.setDescription(req.getDescription());
-        s.setOwner(owner);
+        // Owner logic: si es ADMIN => spell oficial (owner NULL), si no => homebrew (owner = user)
+        if (user.getRole() == ar.utn.tup.goblinmaster.users.User.Role.ADMIN) {
+            s.setOwner(null);
+        } else {
+            s.setOwner(user);
+        }
+        // focus descriptions
+        s.setFocusDesc(req.getFocusDesc());
+        s.setDivineFocusDesc(req.getDivineFocusDesc());
 
         s = spellRepo.save(s);
 
@@ -89,8 +111,13 @@ public class SpellServiceImpl implements SpellService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<SpellListItem> search(String q) {
-        List<Spell> spells = spellRepo.search(q == null ? "" : q);
+    public List<SpellListItem> search(String q, Boolean official) {
+        List<Spell> spells;
+        if (Boolean.TRUE.equals(official)) {
+            spells = spellRepo.searchOfficial(q == null ? "" : q);
+        } else {
+            spells = spellRepo.search(q == null ? "" : q);
+        }
         return spells.stream()
                 .map(spell -> mapper.toListItem(spell, sclRepo.findBySpellId(spell.getId())))
                 .collect(Collectors.toList());
@@ -141,6 +168,18 @@ public class SpellServiceImpl implements SpellService {
         s.setName(req.getName());
         s.setOriginalName(req.getOriginalName());
         s.setSchool(school);
+        // subschool validación
+        if (req.getSubschoolId() != null) {
+            var subs = subschoolRepo.findById(req.getSubschoolId()).orElseThrow(() ->
+                    new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.BAD_REQUEST, "subschoolId inválido"));
+            if (!subs.getSchool().getId().equals(school.getId())) {
+                throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.BAD_REQUEST, "subschoolId no pertenece a la school indicada");
+            }
+            s.setSubschool(subs);
+        } else {
+            s.setSubschool(null);
+        }
+        s.setTarget(req.getTarget());
         s.setCastingTime(req.getCastingTime());
         s.setRangeText(req.getRangeText());
         s.setAreaText(req.getAreaText());
@@ -150,9 +189,11 @@ public class SpellServiceImpl implements SpellService {
         s.setComponentsV(Boolean.TRUE.equals(req.getComponentsV()));
         s.setComponentsS(Boolean.TRUE.equals(req.getComponentsS()));
         s.setComponentsM(Boolean.TRUE.equals(req.getComponentsM()));
-        s.setMaterialDesc(req.getMaterialDesc());
-        s.setSource(req.getSource());
-        s.setDescription(req.getDescription());
+        s.setComponentsF(Boolean.TRUE.equals(req.getComponentsF()));
+        s.setComponentsDf(Boolean.TRUE.equals(req.getComponentsDf()));
+        // actualizar descripciones de foco
+        s.setFocusDesc(req.getFocusDesc());
+        s.setDivineFocusDesc(req.getDivineFocusDesc());
 
         // reemplazar niveles
         sclRepo.deleteAll(sclRepo.findBySpellId(id));
@@ -230,4 +271,3 @@ public class SpellServiceImpl implements SpellService {
         campaignSpellRepo.deleteByCampaignIdAndSpellId(campaignId, spellId);
     }
 }
-

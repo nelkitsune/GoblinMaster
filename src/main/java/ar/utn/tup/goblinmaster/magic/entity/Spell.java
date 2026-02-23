@@ -22,6 +22,11 @@ public class Spell {
     @JoinColumn(name = "school_id")
     private SpellSchool school;
 
+    // nueva relación a subschool (opcional)
+    @ManyToOne
+    @JoinColumn(name = "subschool_id")
+    private SpellSubschool subschool;
+
     @Column(name = "casting_time")
     private String castingTime;
 
@@ -59,6 +64,22 @@ public class Spell {
 
     @Lob
     private String description;
+
+    @Column(name = "target")
+    private String target;
+
+    // nuevos componentes: Focus (F) y Divine Focus (DF)
+    @Column(name = "components_f", nullable = false)
+    private boolean componentsF;
+
+    @Column(name = "components_df", nullable = false)
+    private boolean componentsDf;
+
+    @Column(name = "focus_desc")
+    private String focusDesc;
+
+    @Column(name = "divine_focus_desc")
+    private String divineFocusDesc;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "owner_user_id")

@@ -16,6 +16,14 @@ public interface SpellRepository extends JpaRepository<Spell, Long>, JpaSpecific
          """)
     List<Spell> search(@Param("q") String q);
 
+    @Query("""
+         select s from Spell s
+         where s.owner is null
+           and (:q is null or lower(s.name) like lower(concat('%', :q, '%')))
+         order by s.name
+         """)
+    List<Spell> searchOfficial(@Param("q") String q);
+
 
     @Query("SELECT s FROM Spell s JOIN SpellClassLevel scl ON s.id = scl.spell.id WHERE scl.spellClass.id = :classId ORDER BY s.name")
     List<Spell> findBySpellClassId(Long classId);

@@ -10,7 +10,7 @@ import java.util.List;
 public interface SpellService {
     SpellResponse create(SpellRequest req, Authentication auth);
     SpellResponse get(Long id);
-    List<SpellListItem> search(String q);
+    List<SpellListItem> search(String q, Boolean official);
     List<SpellListItem> getBySpellClass(Long spellClassId, Authentication auth);
     List<SpellListItem> getBySpellClassAndLevel(Long spellClassId, Integer level, Authentication auth);
     SpellResponse update(Long id, SpellRequest req, Authentication auth);

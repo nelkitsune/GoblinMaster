@@ -16,6 +16,8 @@ public class SpellRequest {
 
     @NotBlank private String schoolCode;
 
+    private Long subschoolId; // nuevo campo opcional
+
     private String castingTime;
     private String rangeText;
     private String areaText;
@@ -31,6 +33,14 @@ public class SpellRequest {
     private String source;
     private String summary;
     private String description;
+
+    private String target; // nuevo campo
+
+    private Boolean componentsF; // nuevo
+    private Boolean componentsDf; // nuevo
+
+    private String focusDesc; // nuevo: descripción del foco
+    private String divineFocusDesc; // nuevo: descripción del foco divino
 
     @NotNull
     private Map<String,Integer> classLevels;
